@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+}
+
+model Service {
+  id                Int           @id @default(autoincrement())
+  name              String
+  priceInCents      Int
+  durationInMinutes Int
+  appointments      Appointment[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CANCELED
+}
+
+model Appointment {
+  id            Int               @id @default(autoincrement())
+  customerName  String
+  customerPhone String
+  serviceId     Int
+  service       Service           @relation(fields: [serviceId], references: [id])
+  startTime     DateTime
+  endTime       DateTime
+  status        AppointmentStatus @default(SCHEDULED)
+  version       Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([serviceId])
+  @@index([startTime, endTime])
+}
+
+model BusinessHours {
+  id        Int            @id @default(autoincrement())
+  dayOfWeek Int            @unique
+  openTime  String
+  closeTime String
+  isOff     Boolean        @default(false)
+  breaks    BusinessBreak[]
+}
+
+model BusinessBreak {
+  id              Int           @id @default(autoincrement())
+  businessHoursId Int
+  businessHours   BusinessHours @relation(fields: [businessHoursId], references: [id], onDelete: Cascade)
+  startTime       String
+  endTime         String
+
+  @@index([businessHoursId])
+}
