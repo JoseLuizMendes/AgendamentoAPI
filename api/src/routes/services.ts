@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { Type, type Static } from "@sinclair/typebox";
+import { ErrorResponse } from "../schemas/http.js";
 
 const ServiceBody = Type.Object({
   name: Type.String({ minLength: 1, maxLength: 200 }),
@@ -39,24 +40,28 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
     }
   );
   app.get(
-    "/services/:id",{
-        schema:{
-          tags: ["services"],
-          params:ServiceParams,
-          body:ServiceBody,
-          response: {
-            200: ServiceResponse,
-          },
+    "/services/:id",
+    {
+      schema: {
+        tags: ["services"],
+        params: ServiceParams,
+        response: {
+          200: ServiceResponse,
+          404: ErrorResponse,
         },
+      },
     },
-    async(req)=>{
+    async (req, reply) => {
       const params = req.params as ServiceParamsT;
-      const body = req.body as ServiceBodyT;
-      return app.prisma.service.update({
-        where: { id: params.id },
-        data: body,
-      });
-    });
+
+      const service = await app.prisma.service.findUnique({ where: { id: params.id } });
+      if (!service) {
+        return reply.status(404).send({ message: "Serviço não encontrado" });
+      }
+
+      return service;
+    }
+  );
 
   app.post(
     "/services",
