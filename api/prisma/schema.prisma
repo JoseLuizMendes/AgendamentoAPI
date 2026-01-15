@@ -68,3 +68,13 @@ model BusinessBreak {
 
   @@index([businessHoursId])
 }
+
+model BusinessDateOverride {
+  id        Int      @id @default(autoincrement())
+  date      String   @unique // YYYY-MM-DD
+  openTime  String?
+  closeTime String?
+  isOff     Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
