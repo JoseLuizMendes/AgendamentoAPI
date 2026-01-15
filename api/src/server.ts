@@ -6,6 +6,7 @@ import { dbRoutes } from "./routes/db.js";
 import swaggerPlugin from "./plugins/swagger.js";
 import { servicesRoutes } from "./routes/services.js";
 import { businessHoursRoutes } from "./routes/businessHours.js";
+import { businessDaysRoutes } from "./routes/businessDays.js";
 import { slotsRoutes } from "./routes/slots.js";
 import { appointmentsRoutes } from "./routes/appointments.js";
 
@@ -19,6 +20,7 @@ await app.register(healthRoutes);
 await app.register(dbRoutes);
 await app.register(servicesRoutes);
 await app.register(businessHoursRoutes);
+await app.register(businessDaysRoutes);
 await app.register(slotsRoutes);
 await app.register(appointmentsRoutes);
 
