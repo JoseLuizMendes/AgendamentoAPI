@@ -29,6 +29,7 @@ export const businessHoursRoutes: FastifyPluginAsync = async (app) => {
     {
       schema: {
         tags: ["business"],
+        description: "Lista as janelas de atendimento por dia da semana",
       },
     },
     async () => {
@@ -46,6 +47,7 @@ export const businessHoursRoutes: FastifyPluginAsync = async (app) => {
       schema: {
         tags: ["business"],
         body: Type.Array(BusinessHoursItem, { minItems: 1, maxItems: 7 }),
+        description: "Atualiza as janelas de atendimento por dia da semana",
       },
     },
     async (req) => {
@@ -74,7 +76,8 @@ export const businessHoursRoutes: FastifyPluginAsync = async (app) => {
       schema: {
         tags: ["business"],
         params: DayOfWeekParams,
-        body: Type.Array(BreakItem),
+        body: Type.Array(BreakItem, { minItems: 1 }),
+        description: "Atualiza os intervalos de pausa de um dia",
       },
     },
     async (req, reply) => {
