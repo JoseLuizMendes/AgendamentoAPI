@@ -73,13 +73,18 @@ async function createAppointmentWithRetry(args: {
             include: { breaks: true },
           });
 
+          const override = await tx.businessDateOverride.findUnique({ where: { date } });
+          if (override?.isOff) {
+            throw new Error("Dia indisponível (fechado)");
+          }
+
           const okBusiness = isSlotWithinBusinessHours({
             date,
             business: business
               ? {
-                  openTime: business.openTime,
-                  closeTime: business.closeTime,
-                  isOff: business.isOff,
+                  openTime: override?.openTime ?? business.openTime,
+                  closeTime: override?.closeTime ?? business.closeTime,
+                  isOff: override?.isOff ?? business.isOff,
                   breaks: business.breaks.map((b) => ({ startTime: b.startTime, endTime: b.endTime })),
                 }
               : null,
@@ -142,6 +147,7 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
           404: ErrorResponse,
           409: ErrorResponse,
         },
+        description: "Cria um novo agendamento",
       },
     },
     async (req, reply) => {
@@ -204,6 +210,7 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
           404: ErrorResponse,
           409: ErrorResponse,
         },
+        description: "Cancela um agendamento",
       },
     },
     async (req, reply) => {
