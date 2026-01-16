@@ -1,6 +1,6 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import prismaPlugin from "./plugins/prisma.js";
-import swaggerPlugin from "./plugins/swagger.js";
+import swaggerPlugin from "./plugins/docs/swagger.js";
 import { healthRoutes } from "./routes/health.js";
 import { dbRoutes } from "./routes/db.js";
 import { servicesRoutes } from "./routes/services.js";
