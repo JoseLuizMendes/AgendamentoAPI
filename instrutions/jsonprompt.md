@@ -6,7 +6,7 @@
       "framework": "Fastify",
       "orm": "Prisma",
       "database": "PostgreSQL",
-      "messaging": "BullMQ / Redi
+      "messaging": "BullMQ / Redis",
       "package manager": "pnpm"
     },
     "features": [
@@ -20,7 +20,7 @@
       "Escalabilidade: Arquitetura baseada em plugins e mensageria assíncrona",
       "Performance: Serialização JSON acelerada e baixa latência de resposta",
       "Concorrência: Controle de acesso simultâneo via Optimistic Locking",
-      "Qualidade: Cobertura de testes unitários e análise SonarQube Nota A",
+      "Qualidade: Cobertura de testes unitários",
       "Segurança: Validação rigorosa de inputs via TypeBox"
     ]
   }

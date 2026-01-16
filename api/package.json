@@ -11,8 +11,13 @@
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "pnpm test:unit",
+    "test:unit": "vitest run test/unit",
+    "test:integration:prepare": "tsx test/scripts/prepare-integration-db.ts",
+    "test:integration": "pnpm test:integration:prepare && pnpm prisma:generate && pnpm prisma:deploy && vitest run test/integration",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -34,8 +39,10 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.8",
+    "@vitest/coverage-v8": "^4.0.17",
     "prisma": "^7.2.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.17"
   }
 }

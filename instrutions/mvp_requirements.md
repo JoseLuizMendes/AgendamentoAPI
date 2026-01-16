@@ -32,7 +32,7 @@ Performance: Validação de esquemas e serialização acelerada via TypeBox.
 
 Escalabilidade: Arquitetura baseada em plugins e mensageria distribuída (Redis).
 
-Qualidade: Manter o padrão SonarQube Nota A e tipagem estrita com TypeScript.
+Qualidade: Manter tipagem estrita com TypeScript.
 
 Observabilidade: Implementação do Fastify Logger e métricas de saúde via Actuator-like endpoints.
 
@@ -46,7 +46,7 @@ Appointment: id, customerName, customerPhone, serviceId, startTime, endTime, ver
 BusinessHours: dayOfWeek, openTime, closeTime, isOff.
 
 6. Definição de Pronto (DoD)
-Código validado com 100% de cobertura de tipos e SonarQube Nota A.
+Código validado com 100% de cobertura de tipos.
 
 Endpoints documentados automaticamente via fastify-swagger (OpenAPI 3.0).
 
