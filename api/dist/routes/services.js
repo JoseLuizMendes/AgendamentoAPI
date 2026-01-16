@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import { ErrorResponse } from "../schemas/http.js";
 const ServiceBody = Type.Object({
     name: Type.String({ minLength: 1, maxLength: 200 }),
     priceInCents: Type.Integer({ minimum: 0 }),
@@ -25,6 +26,23 @@ export const servicesRoutes = async (app) => {
         },
     }, async () => {
         return app.prisma.service.findMany({ orderBy: { id: "asc" } });
+    });
+    app.get("/services/:id", {
+        schema: {
+            tags: ["services"],
+            params: ServiceParams,
+            response: {
+                200: ServiceResponse,
+                404: ErrorResponse,
+            },
+        },
+    }, async (req, reply) => {
+        const params = req.params;
+        const service = await app.prisma.service.findUnique({ where: { id: params.id } });
+        if (!service) {
+            return reply.status(404).send({ message: "Serviço não encontrado" });
+        }
+        return service;
     });
     app.post("/services", {
         schema: {

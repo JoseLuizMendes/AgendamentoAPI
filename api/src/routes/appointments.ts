@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { Type, type Static } from "@sinclair/typebox";
-import { Prisma, type Appointment } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { addMinutes, assertIsoDate, toDayOfWeekUtc } from "../lib/time.js";
 import { isSlotWithinBusinessHours } from "../lib/slots.js";
 import { getNotificationsQueue } from "../queues/notifications.js";
@@ -48,14 +48,14 @@ async function createAppointmentWithRetry(args: {
   customerPhone: string;
   serviceId: number;
   startTime: Date;
-}): Promise<Appointment> {
+}): Promise<Prisma.AppointmentGetPayload<{}>> {
   const { app, customerName, customerPhone, serviceId, startTime } = args;
 
   const maxAttempts = 3;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await app.prisma.$transaction(
-        async (tx) => {
+        async (tx: Prisma.TransactionClient) => {
           const service = await tx.service.findUnique({ where: { id: serviceId } });
           if (!service) {
             throw new Error("Serviço não encontrado");

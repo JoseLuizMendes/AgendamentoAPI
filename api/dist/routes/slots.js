@@ -15,6 +15,7 @@ export const slotsRoutes = async (app) => {
     app.get("/slots", {
         schema: {
             tags: ["appointments"],
+            description: "Obtém os horários disponíveis para agendamento",
             querystring: SlotsQuery,
             response: {
                 200: Type.Array(SlotResponse),
@@ -39,6 +40,7 @@ export const slotsRoutes = async (app) => {
             where: { dayOfWeek },
             include: { breaks: true },
         });
+        const override = await app.prisma.businessDateOverride.findUnique({ where: { date: query.date } });
         const intervalMinutes = query.intervalMinutes ?? Number(process.env["SLOT_INTERVAL_MINUTES"] ?? 15);
         const appointments = await app.prisma.appointment.findMany({
             where: {
@@ -54,14 +56,16 @@ export const slotsRoutes = async (app) => {
             date: query.date,
             serviceDurationMinutes: service.durationInMinutes,
             intervalMinutes,
-            business: business
-                ? {
-                    openTime: business.openTime,
-                    closeTime: business.closeTime,
-                    isOff: business.isOff,
-                    breaks: business.breaks.map((b) => ({ startTime: b.startTime, endTime: b.endTime })),
-                }
-                : null,
+            business: override?.isOff
+                ? null
+                : business
+                    ? {
+                        openTime: override?.openTime ?? business.openTime,
+                        closeTime: override?.closeTime ?? business.closeTime,
+                        isOff: override?.isOff ?? business.isOff,
+                        breaks: business.breaks.map((b) => ({ startTime: b.startTime, endTime: b.endTime })),
+                    }
+                    : null,
             appointments: appointments.map((a) => ({ startTime: a.startTime, endTime: a.endTime })),
         });
     });
