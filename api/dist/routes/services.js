@@ -4,7 +4,7 @@ const ServiceBody = Type.Object({
     name: Type.String({ minLength: 1, maxLength: 200 }),
     priceInCents: Type.Integer({ minimum: 0 }),
     durationInMinutes: Type.Integer({ minimum: 1, maximum: 24 * 60 }),
-});
+}, { additionalProperties: false });
 const ServiceParams = Type.Object({
     id: Type.Integer({ minimum: 1 }),
 });
@@ -54,7 +54,13 @@ export const servicesRoutes = async (app) => {
         },
     }, async (req, reply) => {
         const body = req.body;
-        const created = await app.prisma.service.create({ data: body });
+        const created = await app.prisma.service.create({
+            data: {
+                name: body.name,
+                priceInCents: body.priceInCents,
+                durationInMinutes: body.durationInMinutes,
+            },
+        });
         return reply.status(201).send(created);
     });
     app.put("/services/:id", {
@@ -71,7 +77,11 @@ export const servicesRoutes = async (app) => {
         const body = req.body;
         return app.prisma.service.update({
             where: { id: params.id },
-            data: body,
+            data: {
+                name: body.name,
+                priceInCents: body.priceInCents,
+                durationInMinutes: body.durationInMinutes,
+            },
         });
     });
     app.delete("/services/:id", {

@@ -36,7 +36,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       res.setHeader("content-type", "application/json; charset=utf-8");
     }
 
-    const message = err instanceof Error ? err.message : "Internal Server Error";
+    const isProd = process.env["NODE_ENV"] === "production";
+    const message = isProd ? "Internal Server Error" : err instanceof Error ? err.message : "Internal Server Error";
     res.end(JSON.stringify({ message }));
   }
 }

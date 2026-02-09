@@ -1,6 +1,10 @@
 import Fastify, {} from "fastify";
+import { Prisma } from "@prisma/client";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import prismaPlugin from "./plugins/prisma.js";
 import swaggerPlugin from "./plugins/docs/swagger.js";
+import authPlugin from "./plugins/auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { dbRoutes } from "./routes/db.js";
 import { servicesRoutes } from "./routes/services.js";
@@ -12,8 +16,48 @@ export async function buildApp() {
     const app = Fastify({
         logger: true,
     });
+    app.setErrorHandler((err, req, reply) => {
+        // Erros de validação (AJV)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const anyErr = err;
+        if (anyErr?.validation) {
+            const detail = Array.isArray(anyErr.validation)
+                ? anyErr.validation.map((v) => {
+                    const path = v.instancePath ? v.instancePath.replace(/^\//, "") : "body";
+                    return `${path}: ${v.message ?? "inválido"}`;
+                })
+                : [];
+            const message = detail.length > 0 ? `Requisição inválida: ${detail.join(", ")}` : "Requisição inválida";
+            return reply.status(400).send({ message });
+        }
+        // Erros do Prisma
+        if (err instanceof Prisma.PrismaClientKnownRequestError) {
+            if (err.code === "P2002") {
+                return reply.status(409).send({ message: "Conflito: registro já existe" });
+            }
+            if (err.code === "P2025") {
+                return reply.status(404).send({ message: "Registro não encontrado" });
+            }
+            req.log.error({ err }, "Prisma error");
+            return reply.status(500).send({ message: "Internal Server Error" });
+        }
+        req.log.error({ err }, "Unhandled error");
+        return reply.status(500).send({ message: "Internal Server Error" });
+    });
+    await app.register(helmet);
+    await app.register(rateLimit, {
+        max: Number(process.env["RATE_LIMIT_MAX"] ?? 120),
+        timeWindow: process.env["RATE_LIMIT_WINDOW"] ?? "1 minute",
+        allowList: (req) => {
+            const url = req.url ?? "/";
+            return url.startsWith("/health/");
+        },
+    });
     await app.register(prismaPlugin);
-    await app.register(swaggerPlugin);
+    if (process.env["ENABLE_SWAGGER"] === "true") {
+        await app.register(swaggerPlugin);
+    }
+    await app.register(authPlugin);
     await app.register(healthRoutes);
     await app.register(dbRoutes);
     await app.register(servicesRoutes);
