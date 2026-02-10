@@ -1,5 +1,9 @@
 {
-  "builds": [{ "src": "public/**", "use": "@vercel/static" }],
+  "builds": [
+    { "src": "docs/**", "use": "@vercel/static" },
+    { "src": "openapi.json", "use": "@vercel/static" },
+    { "src": "public/**", "use": "@vercel/static" }
+  ],
   "routes": [
     { "src": "^/$", "status": 302, "headers": { "Location": "/docs/" } },
     { "src": "^/docs$", "status": 308, "headers": { "Location": "/docs/" } },
