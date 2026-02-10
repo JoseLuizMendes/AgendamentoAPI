@@ -75,7 +75,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     timeWindow: process.env["RATE_LIMIT_WINDOW"] ?? "1 minute",
     allowList: (req) => {
       const url = req.url ?? "/";
-      return url === "/" || url.startsWith("/health/") || url.startsWith("/docs") || url.startsWith("/documentation/");
+      return url.startsWith("/health/") || url.startsWith("/documentation/");
     },
   });
 

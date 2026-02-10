@@ -6,6 +6,28 @@
     }
   },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index" }
+    { "source": "/services", "destination": "/api/index" },
+    { "source": "/services/:path*", "destination": "/api/index" },
+    { "source": "/appointments", "destination": "/api/index" },
+    { "source": "/appointments/:path*", "destination": "/api/index" },
+    { "source": "/business-hours", "destination": "/api/index" },
+    { "source": "/business-hours/:path*", "destination": "/api/index" },
+    { "source": "/business-days", "destination": "/api/index" },
+    { "source": "/business-days/:path*", "destination": "/api/index" },
+    { "source": "/slots", "destination": "/api/index" },
+    { "source": "/slots/:path*", "destination": "/api/index" },
+    { "source": "/health/:path*", "destination": "/api/index" },
+    { "source": "/documentation/:path*", "destination": "/api/index" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    }
   ]
 }

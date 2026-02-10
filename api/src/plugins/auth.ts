@@ -74,11 +74,10 @@ const authPlugin: FastifyPluginAsync = async (app) => {
     const path = getRequestPath(req.url);
 
     // Rotas públicas
-    const isRoot = path === "/" || path.startsWith("/documentation/");
     const isHealth = path === "/health/live" || path === "/health/ready";
-    const isDocs = path === "/docs" || path.startsWith("/docs/");
+    const isDocs = path.startsWith("/documentation/");
     
-    if (isRoot || isDocs) {
+    if (isDocs) {
       return;
     }
     

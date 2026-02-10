@@ -56,10 +56,9 @@ const authPlugin = async (app) => {
         }
         const path = getRequestPath(req.url);
         // Rotas públicas
-        const isRoot = path === "/" || path.startsWith("/documentation/");
         const isHealth = path === "/health/live" || path === "/health/ready";
-        const isDocs = path === "/docs" || path.startsWith("/docs/");
-        if (isRoot || isDocs) {
+        const isDocs = path.startsWith("/documentation/");
+        if (isDocs) {
             return;
         }
         if (publicHealth === "true" && isHealth) {

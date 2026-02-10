@@ -1,8 +1,6 @@
 import fp from "fastify-plugin";
 import swagger from "@fastify/swagger";
-import swaggerUi from "@fastify/swagger-ui";
 const swaggerPlugin = async (app) => {
-    app.log.info("Registering Swagger plugin...");
     await app.register(swagger, {
         openapi: {
             openapi: "3.1.0",
@@ -23,18 +21,10 @@ const swaggerPlugin = async (app) => {
             security: [{ apiKey: [] }],
         },
     });
-    await app.register(swaggerUi, {
-        routePrefix: "/",
-        uiConfig: {
-            docExpansion: "list",
-            deepLinking: true,
-        },
-        staticCSP: false,
+    // Expõe o OpenAPI JSON
+    app.get("/documentation/json", async () => {
+        return app.swagger();
     });
-    // Alias /docs -> /
-    app.get("/docs", async (_, reply) => reply.redirect("/"));
-    app.get("/docs/*", async (_, reply) => reply.redirect("/"));
-    app.log.info("✓ Swagger UI registered at / and /docs");
 };
 export default fp(swaggerPlugin, {
     name: "swagger",
