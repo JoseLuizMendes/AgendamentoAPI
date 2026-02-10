@@ -38,7 +38,18 @@ export default async function handler(req, res) {
       req.url = req.url.replace(/^\/api(?=\/|\?|$)/, "") || "/";
     }
 
-    app.server.emit("request", req, res);
+    await new Promise((resolve, reject) => {
+      const done = () => resolve();
+      res.once("finish", done);
+      res.once("close", done);
+      res.once("error", reject);
+
+      try {
+        app.server.emit("request", req, res);
+      } catch (err) {
+        reject(err);
+      }
+    });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("Vercel handler failed", err);
