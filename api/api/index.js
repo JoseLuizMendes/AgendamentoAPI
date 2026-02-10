@@ -28,8 +28,6 @@ export default async function handler(req, res) {
   try {
     const app = await getApp();
     
-    console.log(`Request: ${req.method} ${req.url}`);
-    
     await new Promise((resolve, reject) => {
       const cleanup = () => {
         res.off("finish", cleanup);

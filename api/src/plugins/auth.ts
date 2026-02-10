@@ -74,24 +74,15 @@ const authPlugin: FastifyPluginAsync = async (app) => {
     const path = getRequestPath(req.url);
 
     // Rotas públicas
-    const isRoot = path === "/";
+    const isRoot = path === "/" || path.startsWith("/documentation/");
     const isHealth = path === "/health/live" || path === "/health/ready";
-    const isDebug = path.startsWith("/debug/");
+    const isDocs = path === "/docs" || path.startsWith("/docs/");
     
-    if (isRoot || isDebug) {
+    if (isRoot || isDocs) {
       return;
     }
     
     if (publicHealth === "true" && isHealth) {
-      return;
-    }
-
-    // Swagger UI sempre público
-    if (
-      path === "/docs" ||
-      path.startsWith("/docs/") ||
-      path.startsWith("/documentation/")
-    ) {
       return;
     }
 

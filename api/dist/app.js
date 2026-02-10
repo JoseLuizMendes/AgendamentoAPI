@@ -68,7 +68,7 @@ export async function buildApp() {
         timeWindow: process.env["RATE_LIMIT_WINDOW"] ?? "1 minute",
         allowList: (req) => {
             const url = req.url ?? "/";
-            return url.startsWith("/health/") || url.startsWith("/docs") || url.startsWith("/documentation/");
+            return url === "/" || url.startsWith("/health/") || url.startsWith("/docs") || url.startsWith("/documentation/");
         },
     });
     await app.register(swaggerPlugin);
@@ -80,25 +80,6 @@ export async function buildApp() {
     await app.register(businessDaysRoutes);
     await app.register(slotsRoutes);
     await app.register(appointmentsRoutes);
-    // Redirect raiz para docs (registrar DEPOIS de todas as rotas)
-    app.get("/", async (request, reply) => {
-        request.log.info("Root access, redirecting to /docs");
-        return reply.redirect("/docs");
-    });
-    // Rota de diagnóstico (remover após confirmar que funciona)
-    app.get("/debug/routes", async (req, reply) => {
-        const routes = app.printRoutes({ commonPrefix: false });
-        return reply.type("text/plain").send(routes);
-    });
-    // 404 handler
-    app.setNotFoundHandler((request, reply) => {
-        request.log.warn({ url: request.url, method: request.method }, "Route not found");
-        return reply.status(404).send({
-            message: "Route not found",
-            path: request.url,
-            method: request.method,
-        });
-    });
     return app;
 }
 //# sourceMappingURL=app.js.map

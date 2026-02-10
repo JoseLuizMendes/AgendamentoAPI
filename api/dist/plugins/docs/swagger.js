@@ -24,14 +24,17 @@ const swaggerPlugin = async (app) => {
         },
     });
     await app.register(swaggerUi, {
-        routePrefix: "/docs",
+        routePrefix: "/",
         uiConfig: {
             docExpansion: "list",
             deepLinking: true,
         },
         staticCSP: false,
     });
-    app.log.info("✓ Swagger UI registered at /docs");
+    // Alias /docs -> /
+    app.get("/docs", async (_, reply) => reply.redirect("/"));
+    app.get("/docs/*", async (_, reply) => reply.redirect("/"));
+    app.log.info("✓ Swagger UI registered at / and /docs");
 };
 export default fp(swaggerPlugin, {
     name: "swagger",
