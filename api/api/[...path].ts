@@ -6,13 +6,13 @@ let appPromise: Promise<Awaited<ReturnType<typeof buildAppFn>>> | null = null;
 type BuildApp = typeof buildAppFn;
 
 async function loadBuildApp(): Promise<BuildApp> {
-  // Na Vercel, o build normalmente gera dist/. Em ambientes sem build, cai no src.
   try {
     const mod = (await import("../dist/app.js")) as unknown as { buildApp: BuildApp };
     return mod.buildApp;
-  } catch {
-    const mod = (await import("../src/app.js")) as unknown as { buildApp: BuildApp };
-    return mod.buildApp;
+  } catch (err) {
+    const isProd = process.env["NODE_ENV"] === "production";
+    const detail = !isProd && err instanceof Error ? ` (${err.message})` : "";
+    throw new Error(`Falha ao carregar dist/app.js. Confirme que o build rodou na Vercel (pnpm build).${detail}`);
   }
 }
 
