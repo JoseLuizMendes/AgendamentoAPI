@@ -3,9 +3,10 @@
     { "src": "public/**", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "^/$", "status": 302, "headers": { "Location": "/docs" } },
+    { "src": "^/$", "status": 302, "headers": { "Location": "/docs/" } },
+    { "src": "^/docs$", "status": 308, "headers": { "Location": "/docs/" } },
+    { "src": "^/docs/$", "dest": "/docs/index.html" },
     { "handle": "filesystem" },
-    { "src": "/docs$", "dest": "/docs/index.html" },
-    { "src": "/(.*)", "status": 404, "dest": "/404" }
+    { "src": "/(.*)", "status": 404 }
   ]
 }
