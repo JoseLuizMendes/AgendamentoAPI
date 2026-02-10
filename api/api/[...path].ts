@@ -1,11 +1,25 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { buildApp } from "../src/app.js";
+import type { buildApp as buildAppFn } from "../src/app.js";
 
-let appPromise: Promise<Awaited<ReturnType<typeof buildApp>>> | null = null;
+let appPromise: Promise<Awaited<ReturnType<typeof buildAppFn>>> | null = null;
+
+type BuildApp = typeof buildAppFn;
+
+async function loadBuildApp(): Promise<BuildApp> {
+  // Na Vercel, o build normalmente gera dist/. Em ambientes sem build, cai no src.
+  try {
+    const mod = (await import("../dist/app.js")) as unknown as { buildApp: BuildApp };
+    return mod.buildApp;
+  } catch {
+    const mod = (await import("../src/app.js")) as unknown as { buildApp: BuildApp };
+    return mod.buildApp;
+  }
+}
 
 async function getApp() {
   if (!appPromise) {
     appPromise = (async () => {
+      const buildApp = await loadBuildApp();
       const app = await buildApp();
       await app.ready();
       return app;
