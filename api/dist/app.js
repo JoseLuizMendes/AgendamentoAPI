@@ -16,6 +16,20 @@ export async function buildApp() {
     const app = Fastify({
         logger: true,
     });
+    const docsOnly = process.env["PUBLIC_DOCS_ONLY"] === "true";
+    if (docsOnly) {
+        app.addHook("onRequest", async (req, reply) => {
+            const url = req.url ?? "/";
+            const path = url.split("?")[0] ?? "/";
+            if (path === "/") {
+                return reply.code(302).redirect("/docs");
+            }
+            if (path === "/docs" || path.startsWith("/docs/")) {
+                return;
+            }
+            return reply.status(404).send({ message: "Not Found" });
+        });
+    }
     app.setErrorHandler((err, req, reply) => {
         // Erros de validação (AJV)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,14 +64,19 @@ export async function buildApp() {
         timeWindow: process.env["RATE_LIMIT_WINDOW"] ?? "1 minute",
         allowList: (req) => {
             const url = req.url ?? "/";
-            return url.startsWith("/health/");
+            return url.startsWith("/health/") || url.startsWith("/docs");
         },
     });
-    await app.register(prismaPlugin);
-    if (process.env["ENABLE_SWAGGER"] === "true") {
+    // Swagger sempre disponível no modo docs-only
+    if (docsOnly || process.env["ENABLE_SWAGGER"] === "true") {
         await app.register(swaggerPlugin);
     }
-    await app.register(authPlugin);
+    // Para gerar documentação completa, registramos as rotas.
+    // No modo docs-only, elas ficam bloqueadas pelo hook acima e não dependem de DB/auth no runtime.
+    if (!docsOnly) {
+        await app.register(prismaPlugin);
+        await app.register(authPlugin);
+    }
     await app.register(healthRoutes);
     await app.register(dbRoutes);
     await app.register(servicesRoutes);
