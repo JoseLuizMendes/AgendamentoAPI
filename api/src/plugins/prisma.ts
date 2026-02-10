@@ -11,11 +11,22 @@ declare module "fastify" {
 
 let prismaSingleton: PrismaClient | null = null;
 
+function createMissingPrismaClient(): PrismaClient {
+  return new Proxy({} as PrismaClient, {
+    get() {
+      throw new Error("DATABASE_URL não está definido no ambiente (.env)");
+    },
+  });
+}
+
 const prismaPlugin: FastifyPluginAsync = async (app) => {
   const databaseUrl = process.env["DATABASE_URL"];
 
   if (!databaseUrl) {
-    throw new Error("DATABASE_URL não está definido no ambiente (.env)");
+    // Não derruba o app no boot (útil para health/live e para diagnosticar env vars em deploy).
+    // As rotas que precisarem de DB vão falhar ao acessar app.prisma e cair no error handler.
+    app.decorate("prisma", createMissingPrismaClient());
+    return;
   }
 
   if (!prismaSingleton) {

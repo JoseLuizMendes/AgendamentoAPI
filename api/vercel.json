@@ -1,13 +1,16 @@
 {
   "builds": [
     { "src": "docs/**", "use": "@vercel/static" },
-    { "src": "openapi.json", "use": "@vercel/static" }
+    { "src": "openapi.json", "use": "@vercel/static" },
+    { "src": "api/**", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "^/$", "status": 302, "headers": { "Location": "/docs/" } },
     { "src": "^/docs$", "status": 308, "headers": { "Location": "/docs/" } },
     { "src": "^/docs/$", "dest": "/docs/index.html" },
     { "handle": "filesystem" },
+    { "src": "^/api/(.*)$", "dest": "/api/$1" },
+    { "src": "^/(.*)$", "dest": "/api/$1" },
     { "src": "/(.*)", "status": 404 }
   ]
 }

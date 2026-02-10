@@ -49,7 +49,22 @@ const authPlugin: FastifyPluginAsync = async (app) => {
   const publicHealth = process.env["PUBLIC_HEALTH"] ?? "true";
 
   if (enforce && (!apiKey || apiKey.length < 16)) {
-    throw new Error("API_KEY não está definido (ou é muito curto). Defina um segredo forte (>=16 chars). ");
+    app.log.error(
+      { enforce, hasApiKey: Boolean(apiKey), apiKeyLength: apiKey?.length ?? 0 },
+      "API_KEY_ENFORCE=true mas API_KEY ausente/curta; negando requests (exceto health público)"
+    );
+
+    app.addHook("onRequest", async (req, reply) => {
+      const path = getRequestPath(req.url);
+      const isHealth = path === "/health/live" || path === "/health/ready";
+      if (publicHealth === "true" && isHealth) {
+        return;
+      }
+
+      return reply.status(500).send({ message: "Internal Server Error" });
+    });
+
+    return;
   }
 
   app.addHook("onRequest", async (req, reply) => {
