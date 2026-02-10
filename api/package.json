@@ -8,6 +8,7 @@
     "dev": "tsx watch src/server.ts",
     "worker:dev": "tsx watch src/worker.ts",
     "build": "prisma generate && tsc -p tsconfig.json",
+    "vercel-build": "pnpm -s build",
     "postinstall": "prisma generate",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",

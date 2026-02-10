@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { buildApp } from "../src/app.js";
+import { buildApp } from "../dist/app.js";
 
 // Deixa o Fastify parsear o body (evita o bodyParser default da Vercel)
 export const config = {
