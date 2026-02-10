@@ -1,12 +1,14 @@
 {
-  "redirects": [
-    { "source": "/", "destination": "/docs/", "permanent": false },
-    { "source": "/docs", "destination": "/docs/", "permanent": true }
+  "version": 2,
+  "builds": [
+    { "src": "docs/**", "use": "@vercel/static" },
+    { "src": "openapi.json", "use": "@vercel/static" },
+    { "src": "api/**/*.ts", "use": "@vercel/node" }
   ],
-  "rewrites": [
-    { "source": "/docs/:path*", "destination": "/docs/:path*" },
-    { "source": "/openapi.json", "destination": "/openapi.json" },
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/:path*", "destination": "/api/:path*" }
+  "routes": [
+    { "src": "^/$", "status": 302, "headers": { "Location": "/docs/" } },
+    { "src": "^/docs$", "status": 308, "headers": { "Location": "/docs/" } },
+    { "handle": "filesystem" },
+    { "src": "^/(?!api/)(.*)$", "dest": "/api/$1" }
   ]
 }
