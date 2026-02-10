@@ -53,12 +53,10 @@ export async function buildApp() {
         timeWindow: process.env["RATE_LIMIT_WINDOW"] ?? "1 minute",
         allowList: (req) => {
             const url = req.url ?? "/";
-            return url.startsWith("/health/") || url.startsWith("/docs");
+            return url.startsWith("/health/") || url.startsWith("/docs") || url.startsWith("/documentation/");
         },
     });
-    if (process.env["ENABLE_SWAGGER"] === "true") {
-        await app.register(swaggerPlugin);
-    }
+    await app.register(swaggerPlugin);
     await app.register(prismaPlugin);
     await app.register(authPlugin);
     await app.register(healthRoutes);

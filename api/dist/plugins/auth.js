@@ -37,7 +37,6 @@ function extractApiKey(headers) {
 const authPlugin = async (app) => {
     const enforce = (process.env["API_KEY_ENFORCE"] ?? (process.env["NODE_ENV"] === "production" ? "true" : "false")) === "true";
     const apiKey = process.env["API_KEY"];
-    const enableSwagger = process.env["ENABLE_SWAGGER"] === "true";
     const publicHealth = process.env["PUBLIC_HEALTH"] ?? "true";
     if (enforce && (!apiKey || apiKey.length < 16)) {
         app.log.error({ enforce, hasApiKey: Boolean(apiKey), apiKeyLength: apiKey?.length ?? 0 }, "API_KEY_ENFORCE=true mas API_KEY ausente/curta; negando requests (exceto health público)");
@@ -56,11 +55,15 @@ const authPlugin = async (app) => {
             return;
         }
         const path = getRequestPath(req.url);
+        // Rotas públicas
         const isHealth = path === "/health/live" || path === "/health/ready";
         if (publicHealth === "true" && isHealth) {
             return;
         }
-        if (enableSwagger && (path === "/docs" || path.startsWith("/docs/"))) {
+        // Swagger UI sempre público
+        if (path === "/docs" ||
+            path.startsWith("/docs/") ||
+            path.startsWith("/documentation/")) {
             return;
         }
         const presented = extractApiKey(req.headers);

@@ -1,9 +1,11 @@
 {
   "version": 2,
-  "routes": [
-    { "src": "^/$", "status": 302, "headers": { "Location": "/docs/" } },
-    { "src": "^/docs$", "status": 308, "headers": { "Location": "/docs/" } },
-    { "handle": "filesystem" },
-    { "src": "^/(?!api/)(.*)$", "dest": "/api/$1" }
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
   ]
 }

@@ -45,7 +45,6 @@ function extractApiKey(headers: Record<string, unknown>): string | null {
 const authPlugin: FastifyPluginAsync = async (app) => {
   const enforce = (process.env["API_KEY_ENFORCE"] ?? (process.env["NODE_ENV"] === "production" ? "true" : "false")) === "true";
   const apiKey = process.env["API_KEY"];
-  const enableSwagger = process.env["ENABLE_SWAGGER"] === "true";
   const publicHealth = process.env["PUBLIC_HEALTH"] ?? "true";
 
   if (enforce && (!apiKey || apiKey.length < 16)) {
@@ -74,12 +73,18 @@ const authPlugin: FastifyPluginAsync = async (app) => {
 
     const path = getRequestPath(req.url);
 
+    // Rotas públicas
     const isHealth = path === "/health/live" || path === "/health/ready";
     if (publicHealth === "true" && isHealth) {
       return;
     }
 
-    if (enableSwagger && (path === "/docs" || path.startsWith("/docs/"))) {
+    // Swagger UI sempre público
+    if (
+      path === "/docs" ||
+      path.startsWith("/docs/") ||
+      path.startsWith("/documentation/")
+    ) {
       return;
     }
 

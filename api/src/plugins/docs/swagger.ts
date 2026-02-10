@@ -6,16 +6,32 @@ import swaggerUi from "@fastify/swagger-ui";
 const swaggerPlugin: FastifyPluginAsync = async (app) => {
   await app.register(swagger, {
     openapi: {
+      openapi: "3.1.0",
       info: {
-        title: "Scheduler-Fastify-Pro",
+        title: "Agendamento API",
         version: "1.0.0",
-        description: "API de agendamento (MVP)",
+        description: "API para gerenciamento de agendamentos",
       },
+      components: {
+        securitySchemes: {
+          apiKey: {
+            type: "apiKey",
+            name: "x-api-key",
+            in: "header",
+          },
+        },
+      },
+      security: [{ apiKey: [] }],
     },
   });
 
   await app.register(swaggerUi, {
     routePrefix: "/docs",
+    uiConfig: {
+      docExpansion: "list",
+      deepLinking: true,
+    },
+    staticCSP: true,
   });
 };
 
