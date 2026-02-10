@@ -1,15 +1,11 @@
 {
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/docs",
-      "permanent": false
-    }
+  "builds": [
+    { "src": "public/**", "use": "@vercel/static" }
   ],
-  "rewrites": [
-    {
-      "source": "/docs",
-      "destination": "/docs/index.html"
-    }
+  "routes": [
+    { "src": "^/$", "status": 302, "headers": { "Location": "/docs" } },
+    { "handle": "filesystem" },
+    { "src": "/docs$", "dest": "/docs/index.html" },
+    { "src": "/(.*)", "status": 404, "dest": "/404" }
   ]
 }
