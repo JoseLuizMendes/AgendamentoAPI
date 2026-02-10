@@ -75,5 +75,16 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(slotsRoutes);
   await app.register(appointmentsRoutes);
 
+  // Redirect raiz para docs
+  app.get("/", async (_, reply) => {
+    return reply.redirect("/docs");
+  });
+
+  // Rota de diagnóstico (remover após confirmar que funciona)
+  app.get("/debug/routes", async (req, reply) => {
+    const routes = app.printRoutes({ commonPrefix: false });
+    return reply.type("text/plain").send(routes);
+  });
+
   return app;
 }

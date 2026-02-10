@@ -75,7 +75,12 @@ const authPlugin: FastifyPluginAsync = async (app) => {
 
     // Rotas públicas
     const isHealth = path === "/health/live" || path === "/health/ready";
+    const isDebug = path.startsWith("/debug/");
     if (publicHealth === "true" && isHealth) {
+      return;
+    }
+    
+    if (isDebug) {
       return;
     }
 

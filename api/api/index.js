@@ -11,9 +11,15 @@ let appInstance = null;
 
 async function getApp() {
   if (!appInstance) {
-    const { buildApp } = await import("../dist/app.js");
-    appInstance = await buildApp();
-    await appInstance.ready();
+    try {
+      const { buildApp } = await import("../dist/app.js");
+      appInstance = await buildApp();
+      await appInstance.ready();
+      console.log("✓ Fastify app initialized");
+    } catch (err) {
+      console.error("Failed to initialize app:", err);
+      throw err;
+    }
   }
   return appInstance;
 }

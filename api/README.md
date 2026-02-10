@@ -38,6 +38,13 @@ RATE_LIMIT_WINDOW=1 minute
   - Requer header: `x-api-key: seu-token` ou `Authorization: Bearer seu-token`
 - **Health check**: `https://seu-app.vercel.app/health/live` (público)
 
+### Debug em produção
+
+Se `/docs` não aparecer após deploy:
+1. Acesse `https://seu-app.vercel.app/debug/routes` para ver rotas registradas
+2. Veja logs da Function no dashboard da Vercel
+3. Consulte [TROUBLESHOOTING.md](TROUBLESHOOTING.md) para guia completo
+
 ## 📦 Estrutura do Projeto
 
 ```

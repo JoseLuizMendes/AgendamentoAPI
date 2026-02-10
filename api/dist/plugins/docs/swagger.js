@@ -2,6 +2,7 @@ import fp from "fastify-plugin";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 const swaggerPlugin = async (app) => {
+    app.log.info("Registering Swagger plugin...");
     await app.register(swagger, {
         openapi: {
             openapi: "3.1.0",
@@ -30,6 +31,7 @@ const swaggerPlugin = async (app) => {
         },
         staticCSP: true,
     });
+    app.log.info("✓ Swagger UI registered at /docs");
 };
 export default fp(swaggerPlugin, {
     name: "swagger",
