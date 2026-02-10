@@ -33,7 +33,7 @@ const swaggerPlugin: FastifyPluginAsync = async (app) => {
       docExpansion: "list",
       deepLinking: true,
     },
-    staticCSP: true,
+    staticCSP: false,
   });
 
   app.log.info("✓ Swagger UI registered at /docs");

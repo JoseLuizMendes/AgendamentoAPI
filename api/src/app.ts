@@ -53,7 +53,22 @@ export async function buildApp(): Promise<FastifyInstance> {
     return reply.status(500).send({ message: "Internal Server Error" });
   });
 
-  await app.register(helmet);
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://unpkg.com",
+          "https://cdn.jsdelivr.net",
+          "https://vercel.live",
+        ],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
+  });
 
   await app.register(rateLimit, {
     max: Number(process.env["RATE_LIMIT_MAX"] ?? 120),
@@ -62,6 +77,11 @@ export async function buildApp(): Promise<FastifyInstance> {
       const url = req.url ?? "/";
       return url.startsWith("/health/") || url.startsWith("/docs") || url.startsWith("/documentation/");
     },
+  });
+
+  // Redirect raiz para docs (registrar ANTES do swagger)
+  app.get("/", async (_, reply) => {
+    return reply.redirect("/docs");
   });
 
   await app.register(swaggerPlugin);
@@ -74,11 +94,6 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(businessDaysRoutes);
   await app.register(slotsRoutes);
   await app.register(appointmentsRoutes);
-
-  // Redirect raiz para docs
-  app.get("/", async (_, reply) => {
-    return reply.redirect("/docs");
-  });
 
   // Rota de diagnóstico (remover após confirmar que funciona)
   app.get("/debug/routes", async (req, reply) => {

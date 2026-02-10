@@ -56,12 +56,13 @@ const authPlugin = async (app) => {
         }
         const path = getRequestPath(req.url);
         // Rotas públicas
+        const isRoot = path === "/";
         const isHealth = path === "/health/live" || path === "/health/ready";
         const isDebug = path.startsWith("/debug/");
-        if (publicHealth === "true" && isHealth) {
+        if (isRoot || isDebug) {
             return;
         }
-        if (isDebug) {
+        if (publicHealth === "true" && isHealth) {
             return;
         }
         // Swagger UI sempre público
