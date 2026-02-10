@@ -1,12 +1,9 @@
 {
-  "redirects": [
-    { "source": "/", "destination": "/docs/", "permanent": false },
-    { "source": "/docs", "destination": "/docs/", "permanent": true }
-  ],
-  "rewrites": [
-    { "source": "/docs/:path*", "destination": "/docs/:path*" },
-    { "source": "/openapi.json", "destination": "/openapi.json" },
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/:path*", "destination": "/api/:path*" }
+  "version": 2,
+  "routes": [
+    { "src": "^/$", "status": 302, "headers": { "Location": "/docs/" } },
+    { "src": "^/docs$", "status": 308, "headers": { "Location": "/docs/" } },
+    { "handle": "filesystem" },
+    { "src": "^/(?!api/)(.*)$", "dest": "/api/$1" }
   ]
 }
