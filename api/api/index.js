@@ -28,6 +28,11 @@ export default async function handler(req, res) {
   try {
     const app = await getApp();
     
+    // Remove /api prefix para o Fastify
+    if (req.url && req.url.startsWith("/api")) {
+      req.url = req.url.replace(/^\/api/, "") || "/";
+    }
+    
     await new Promise((resolve, reject) => {
       const cleanup = () => {
         res.off("finish", cleanup);
