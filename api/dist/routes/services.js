@@ -1,5 +1,11 @@
 import { Type } from "@sinclair/typebox";
 import { ErrorResponse } from "../schemas/http.js";
+import { createRepositories } from "../infra/prisma/repositories.js";
+import { createService } from "../application/usecases/services/createService.js";
+import { deleteService } from "../application/usecases/services/deleteService.js";
+import { getService } from "../application/usecases/services/getService.js";
+import { listServices } from "../application/usecases/services/listServices.js";
+import { updateService } from "../application/usecases/services/updateService.js";
 const ServiceBody = Type.Object({
     name: Type.String({ minLength: 1, maxLength: 200 }),
     priceInCents: Type.Integer({ minimum: 0 }),
@@ -25,7 +31,8 @@ export const servicesRoutes = async (app) => {
             },
         },
     }, async () => {
-        return app.prisma.service.findMany({ orderBy: { id: "asc" } });
+        const repos = createRepositories(app.prisma);
+        return listServices(repos);
     });
     app.get("/services/:id", {
         schema: {
@@ -36,13 +43,10 @@ export const servicesRoutes = async (app) => {
                 404: ErrorResponse,
             },
         },
-    }, async (req, reply) => {
+    }, async (req) => {
         const params = req.params;
-        const service = await app.prisma.service.findUnique({ where: { id: params.id } });
-        if (!service) {
-            return reply.status(404).send({ message: "Serviço não encontrado" });
-        }
-        return service;
+        const repos = createRepositories(app.prisma);
+        return getService(repos, params.id);
     });
     app.post("/services", {
         schema: {
@@ -54,12 +58,11 @@ export const servicesRoutes = async (app) => {
         },
     }, async (req, reply) => {
         const body = req.body;
-        const created = await app.prisma.service.create({
-            data: {
-                name: body.name,
-                priceInCents: body.priceInCents,
-                durationInMinutes: body.durationInMinutes,
-            },
+        const repos = createRepositories(app.prisma);
+        const created = await createService(repos, {
+            name: body.name,
+            priceInCents: body.priceInCents,
+            durationInMinutes: body.durationInMinutes,
         });
         return reply.status(201).send(created);
     });
@@ -75,13 +78,12 @@ export const servicesRoutes = async (app) => {
     }, async (req) => {
         const params = req.params;
         const body = req.body;
-        return app.prisma.service.update({
-            where: { id: params.id },
-            data: {
-                name: body.name,
-                priceInCents: body.priceInCents,
-                durationInMinutes: body.durationInMinutes,
-            },
+        const repos = createRepositories(app.prisma);
+        return updateService(repos, {
+            id: params.id,
+            name: body.name,
+            priceInCents: body.priceInCents,
+            durationInMinutes: body.durationInMinutes,
         });
     });
     app.delete("/services/:id", {
@@ -94,7 +96,8 @@ export const servicesRoutes = async (app) => {
         },
     }, async (req, reply) => {
         const params = req.params;
-        await app.prisma.service.delete({ where: { id: params.id } });
+        const repos = createRepositories(app.prisma);
+        await deleteService(repos, params.id);
         return reply.status(204).send(null);
     });
 };

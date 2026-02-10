@@ -1,6 +1,9 @@
 import { Type } from "@sinclair/typebox";
 import { ErrorResponse } from "../schemas/http.js";
-import { assertIsoDate, parseTimeToMinutes, toDayOfWeekUtc } from "../lib/time.js";
+import { createRepositories } from "../infra/prisma/repositories.js";
+import { deleteBusinessDateOverride } from "../application/usecases/business/deleteBusinessDateOverride.js";
+import { listBusinessDateOverrides } from "../application/usecases/business/listBusinessDateOverrides.js";
+import { upsertBusinessDateOverride } from "../application/usecases/business/upsertBusinessDateOverride.js";
 const TimeString = Type.String({ pattern: "^\\d{2}:\\d{2}$" });
 const DateParams = Type.Object({
     date: Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
@@ -29,7 +32,8 @@ export const businessDaysRoutes = async (app) => {
             },
         },
     }, async () => {
-        return app.prisma.businessDateOverride.findMany({ orderBy: { date: "asc" } });
+        const repos = createRepositories(app.prisma);
+        return listBusinessDateOverrides(repos);
     });
     app.put("/business-days/:date", {
         schema: {
@@ -42,52 +46,16 @@ export const businessDaysRoutes = async (app) => {
                 400: ErrorResponse,
             },
         },
-    }, async (req, reply) => {
+    }, async (req) => {
         const params = req.params;
         const body = req.body;
-        try {
-            assertIsoDate(params.date);
-        }
-        catch (e) {
-            return reply.status(400).send({ message: e.message });
-        }
-        const hasOpen = typeof body.openTime === "string";
-        const hasClose = typeof body.closeTime === "string";
-        if (hasOpen !== hasClose) {
-            return reply.status(400).send({ message: "Informe openTime e closeTime juntos" });
-        }
-        if (hasOpen && hasClose) {
-            const openMinutes = parseTimeToMinutes(body.openTime);
-            const closeMinutes = parseTimeToMinutes(body.closeTime);
-            if (closeMinutes <= openMinutes) {
-                return reply.status(400).send({ message: "closeTime deve ser maior que openTime" });
-            }
-        }
-        // Se está tentando "abrir" (isOff=false) sem horários, exige que exista configuração padrão do dia da semana.
-        if (!body.isOff && !hasOpen && !hasClose) {
-            const dayOfWeek = toDayOfWeekUtc(params.date);
-            const base = await app.prisma.businessHours.findUnique({ where: { dayOfWeek } });
-            if (!base) {
-                return reply.status(400).send({
-                    message: "Para ativar sem horários, configure primeiro /business-hours para o dia da semana correspondente",
-                });
-            }
-        }
-        const override = await app.prisma.businessDateOverride.upsert({
-            where: { date: params.date },
-            create: {
-                date: params.date,
-                isOff: body.isOff,
-                openTime: body.openTime ?? null,
-                closeTime: body.closeTime ?? null,
-            },
-            update: {
-                isOff: body.isOff,
-                openTime: body.openTime ?? null,
-                closeTime: body.closeTime ?? null,
-            },
+        const repos = createRepositories(app.prisma);
+        return upsertBusinessDateOverride(repos, {
+            date: params.date,
+            isOff: body.isOff,
+            ...(typeof body.openTime === "string" ? { openTime: body.openTime } : {}),
+            ...(typeof body.closeTime === "string" ? { closeTime: body.closeTime } : {}),
         });
-        return override;
     });
     app.delete("/business-days/:date", {
         schema: {
@@ -101,17 +69,8 @@ export const businessDaysRoutes = async (app) => {
         },
     }, async (req, reply) => {
         const params = req.params;
-        try {
-            assertIsoDate(params.date);
-        }
-        catch (e) {
-            return reply.status(404).send({ message: "Override não encontrado para essa data" });
-        }
-        const existing = await app.prisma.businessDateOverride.findUnique({ where: { date: params.date } });
-        if (!existing) {
-            return reply.status(404).send({ message: "Override não encontrado para essa data" });
-        }
-        await app.prisma.businessDateOverride.delete({ where: { date: params.date } });
+        const repos = createRepositories(app.prisma);
+        await deleteBusinessDateOverride(repos, params.date);
         return reply.status(204).send(null);
     });
 };

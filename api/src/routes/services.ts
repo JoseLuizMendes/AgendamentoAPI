@@ -1,6 +1,12 @@
 import type { FastifyPluginAsync } from "fastify";
 import { Type, type Static } from "@sinclair/typebox";
 import { ErrorResponse } from "../schemas/http.js";
+import { createRepositories } from "../infra/prisma/repositories.js";
+import { createService } from "../application/usecases/services/createService.js";
+import { deleteService } from "../application/usecases/services/deleteService.js";
+import { getService } from "../application/usecases/services/getService.js";
+import { listServices } from "../application/usecases/services/listServices.js";
+import { updateService } from "../application/usecases/services/updateService.js";
 
 const ServiceBody = Type.Object(
   {
@@ -39,7 +45,8 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async () => {
-      return app.prisma.service.findMany({ orderBy: { id: "asc" } });
+      const repos = createRepositories(app.prisma);
+      return listServices(repos);
     }
   );
   app.get(
@@ -54,15 +61,10 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
         },
       },
     },
-    async (req, reply) => {
+    async (req) => {
       const params = req.params as ServiceParamsT;
-
-      const service = await app.prisma.service.findUnique({ where: { id: params.id } });
-      if (!service) {
-        return reply.status(404).send({ message: "Serviço não encontrado" });
-      }
-
-      return service;
+      const repos = createRepositories(app.prisma);
+      return getService(repos, params.id);
     }
   );
 
@@ -79,12 +81,11 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
     },
     async (req, reply) => {
       const body = req.body as ServiceBodyT;
-      const created = await app.prisma.service.create({
-        data: {
-          name: body.name,
-          priceInCents: body.priceInCents,
-          durationInMinutes: body.durationInMinutes,
-        },
+      const repos = createRepositories(app.prisma);
+      const created = await createService(repos, {
+        name: body.name,
+        priceInCents: body.priceInCents,
+        durationInMinutes: body.durationInMinutes,
       });
       return reply.status(201).send(created);
     }
@@ -105,13 +106,12 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
     async (req) => {
       const params = req.params as ServiceParamsT;
       const body = req.body as ServiceBodyT;
-      return app.prisma.service.update({
-        where: { id: params.id },
-        data: {
-          name: body.name,
-          priceInCents: body.priceInCents,
-          durationInMinutes: body.durationInMinutes,
-        },
+      const repos = createRepositories(app.prisma);
+      return updateService(repos, {
+        id: params.id,
+        name: body.name,
+        priceInCents: body.priceInCents,
+        durationInMinutes: body.durationInMinutes,
       });
     }
   );
@@ -129,7 +129,8 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
     },
     async (req, reply) => {
       const params = req.params as ServiceParamsT;
-      await app.prisma.service.delete({ where: { id: params.id } });
+      const repos = createRepositories(app.prisma);
+      await deleteService(repos, params.id);
       return reply.status(204).send(null);
     }
   );

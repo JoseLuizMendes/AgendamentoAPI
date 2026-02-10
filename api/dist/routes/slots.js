@@ -1,7 +1,7 @@
 import { Type } from "@sinclair/typebox";
-import { calculateAvailableSlots } from "../lib/slots.js";
-import { assertIsoDate, toDayOfWeekUtc } from "../lib/time.js";
 import { ErrorResponse } from "../schemas/http.js";
+import { createRepositories } from "../infra/prisma/repositories.js";
+import { getAvailableSlots } from "../application/usecases/slots/getAvailableSlots.js";
 const SlotsQuery = Type.Object({
     serviceId: Type.Integer({ minimum: 1 }),
     date: Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
@@ -23,50 +23,14 @@ export const slotsRoutes = async (app) => {
                 404: ErrorResponse,
             },
         },
-    }, async (req, reply) => {
+    }, async (req) => {
         const query = req.query;
-        try {
-            assertIsoDate(query.date);
-        }
-        catch (e) {
-            return reply.status(400).send({ message: e.message });
-        }
-        const service = await app.prisma.service.findUnique({ where: { id: query.serviceId } });
-        if (!service) {
-            return reply.status(404).send({ message: "Serviço não encontrado" });
-        }
-        const dayOfWeek = toDayOfWeekUtc(query.date);
-        const business = await app.prisma.businessHours.findUnique({
-            where: { dayOfWeek },
-            include: { breaks: true },
-        });
-        const override = await app.prisma.businessDateOverride.findUnique({ where: { date: query.date } });
         const intervalMinutes = query.intervalMinutes ?? Number(process.env["SLOT_INTERVAL_MINUTES"] ?? 15);
-        const appointments = await app.prisma.appointment.findMany({
-            where: {
-                status: "SCHEDULED",
-                startTime: {
-                    gte: new Date(`${query.date}T00:00:00.000Z`),
-                    lt: new Date(`${query.date}T23:59:59.999Z`),
-                },
-            },
-            select: { startTime: true, endTime: true },
-        });
-        return calculateAvailableSlots({
+        const repos = createRepositories(app.prisma);
+        return getAvailableSlots(repos, {
+            serviceId: query.serviceId,
             date: query.date,
-            serviceDurationMinutes: service.durationInMinutes,
             intervalMinutes,
-            business: override?.isOff
-                ? null
-                : business
-                    ? {
-                        openTime: override?.openTime ?? business.openTime,
-                        closeTime: override?.closeTime ?? business.closeTime,
-                        isOff: override?.isOff ?? business.isOff,
-                        breaks: business.breaks.map((b) => ({ startTime: b.startTime, endTime: b.endTime })),
-                    }
-                    : null,
-            appointments: appointments.map((a) => ({ startTime: a.startTime, endTime: a.endTime })),
         });
     });
 };

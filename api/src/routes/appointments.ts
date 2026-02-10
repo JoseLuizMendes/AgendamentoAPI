@@ -1,10 +1,11 @@
-import type { FastifyInstance, FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync } from "fastify";
 import { Type, type Static } from "@sinclair/typebox";
-import { Prisma } from "@prisma/client";
-import { addMinutes, assertIsoDate, toDayOfWeekUtc } from "../lib/time.js";
-import { isSlotWithinBusinessHours } from "../lib/slots.js";
 import { getNotificationsQueue } from "../queues/notifications.js";
 import { ErrorResponse } from "../schemas/http.js";
+import { createTransactionManager } from "../infra/prisma/transactionManager.js";
+import { createAppointment } from "../application/usecases/appointments/createAppointment.js";
+import { cancelAppointment } from "../application/usecases/appointments/cancelAppointment.js";
+import { createRepositories } from "../infra/prisma/repositories.js";
 
 const AppointmentCreateBody = Type.Object({
   customerName: Type.String({ minLength: 1, maxLength: 200 }),
@@ -38,102 +39,6 @@ type AppointmentCreateBodyT = Static<typeof AppointmentCreateBody>;
 type AppointmentParamsT = Static<typeof AppointmentParams>;
 type AppointmentCancelBodyT = Static<typeof AppointmentCancelBody>;
 
-function isRetryableTxError(err: unknown): boolean {
-  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
-}
-
-async function createAppointmentWithRetry(args: {
-  app: FastifyInstance;
-  customerName: string;
-  customerPhone: string;
-  serviceId: number;
-  startTime: Date;
-}): Promise<Prisma.AppointmentGetPayload<{}>> {
-  const { app, customerName, customerPhone, serviceId, startTime } = args;
-
-  const maxAttempts = 3;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await app.prisma.$transaction(
-        async (tx: Prisma.TransactionClient) => {
-          const service = await tx.service.findUnique({ where: { id: serviceId } });
-          if (!service) {
-            throw new Error("Serviço não encontrado");
-          }
-
-          const endTime = addMinutes(startTime, service.durationInMinutes);
-
-          // Verifica regras de agenda
-          const date = startTime.toISOString().slice(0, 10);
-          assertIsoDate(date);
-          const dayOfWeek = toDayOfWeekUtc(date);
-
-          const business = await tx.businessHours.findUnique({
-            where: { dayOfWeek },
-            include: { breaks: true },
-          });
-
-          const override = await tx.businessDateOverride.findUnique({ where: { date } });
-          if (override?.isOff) {
-            throw new Error("Dia indisponível (fechado)");
-          }
-
-          const okBusiness = isSlotWithinBusinessHours({
-            date,
-            business: business
-              ? {
-                  openTime: override?.openTime ?? business.openTime,
-                  closeTime: override?.closeTime ?? business.closeTime,
-                  isOff: override?.isOff ?? business.isOff,
-                  breaks: business.breaks.map((b) => ({ startTime: b.startTime, endTime: b.endTime })),
-                }
-              : null,
-            startTime,
-            endTime,
-          });
-
-          if (!okBusiness) {
-            throw new Error("Horário fora da agenda configurada");
-          }
-
-          // Prevenção de conflito (overlap) - transação SERIALIZABLE + retry
-          const conflict = await tx.appointment.findFirst({
-            where: {
-              status: "SCHEDULED",
-              startTime: { lt: endTime },
-              endTime: { gt: startTime },
-            },
-            select: { id: true },
-          });
-
-          if (conflict) {
-            throw new Error("Conflito: horário já ocupado");
-          }
-
-          return tx.appointment.create({
-            data: {
-              customerName,
-              customerPhone,
-              serviceId,
-              startTime,
-              endTime,
-            },
-          });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-      );
-    } catch (err) {
-      if (attempt < maxAttempts && isRetryableTxError(err)) {
-        await new Promise((r) => setTimeout(r, 30 * attempt));
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  throw new Error("Falha ao criar agendamento");
-}
-
 export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     "/appointments",
@@ -158,25 +63,13 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(400).send({ message: "startTime inválido" });
       }
 
-      let created;
-      try {
-        created = await createAppointmentWithRetry({
-          app,
-          customerName: body.customerName,
-          customerPhone: body.customerPhone,
-          serviceId: body.serviceId,
-          startTime,
-        });
-      } catch (e) {
-        const message = e instanceof Error ? e.message : "Erro ao criar agendamento";
-        const status =
-          message.includes("startTime") || message.includes("inválid") || message.includes("agenda")
-            ? 400
-            : message.includes("não encontrado")
-              ? 404
-              : 409;
-        return reply.status(status).send({ message });
-      }
+      const tx = createTransactionManager(app.prisma);
+      const created = await createAppointment(tx, {
+        customerName: body.customerName,
+        customerPhone: body.customerPhone,
+        serviceId: body.serviceId,
+        startTime,
+      });
 
       // Notificação assíncrona (best-effort)
       try {
@@ -216,30 +109,10 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       const params = req.params as AppointmentParamsT;
       const body = req.body as AppointmentCancelBodyT;
-      const updated = await app.prisma.appointment.updateMany({
-        where: {
-          id: params.id,
-          version: body.version,
-          status: "SCHEDULED",
-        },
-        data: {
-          status: "CANCELED",
-          version: { increment: 1 },
-        },
-      });
 
-      if (updated.count === 0) {
-        return reply.status(409).send({
-          message: "Conflito de versão ou agendamento não encontrado/já cancelado",
-        });
-      }
-
-      const appointment = await app.prisma.appointment.findUnique({ where: { id: params.id } });
-      if (!appointment) {
-        return reply.status(404).send({ message: "Agendamento não encontrado" });
-      }
-
-      return appointment;
+      const repos = createRepositories(app.prisma);
+      const appointment = await cancelAppointment(repos, { id: params.id, version: body.version });
+      return reply.send(appointment);
     }
   );
 };

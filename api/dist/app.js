@@ -5,8 +5,8 @@ import rateLimit from "@fastify/rate-limit";
 import prismaPlugin from "./plugins/prisma.js";
 import swaggerPlugin from "./plugins/docs/swagger.js";
 import authPlugin from "./plugins/auth.js";
+import { AppError } from "./application/errors.js";
 import { healthRoutes } from "./routes/health.js";
-import { dbRoutes } from "./routes/db.js";
 import { servicesRoutes } from "./routes/services.js";
 import { businessHoursRoutes } from "./routes/businessHours.js";
 import { businessDaysRoutes } from "./routes/businessDays.js";
@@ -16,21 +16,10 @@ export async function buildApp() {
     const app = Fastify({
         logger: true,
     });
-    const docsOnly = process.env["PUBLIC_DOCS_ONLY"] === "true";
-    if (docsOnly) {
-        app.addHook("onRequest", async (req, reply) => {
-            const url = req.url ?? "/";
-            const path = url.split("?")[0] ?? "/";
-            if (path === "/") {
-                return reply.code(302).redirect("/docs");
-            }
-            if (path === "/docs" || path.startsWith("/docs/")) {
-                return;
-            }
-            return reply.status(404).send({ message: "Not Found" });
-        });
-    }
     app.setErrorHandler((err, req, reply) => {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ message: err.message });
+        }
         // Erros de validação (AJV)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const anyErr = err;
@@ -67,18 +56,12 @@ export async function buildApp() {
             return url.startsWith("/health/") || url.startsWith("/docs");
         },
     });
-    // Swagger sempre disponível no modo docs-only
-    if (docsOnly || process.env["ENABLE_SWAGGER"] === "true") {
+    if (process.env["ENABLE_SWAGGER"] === "true") {
         await app.register(swaggerPlugin);
     }
-    // Para gerar documentação completa, registramos as rotas.
-    // No modo docs-only, elas ficam bloqueadas pelo hook acima e não dependem de DB/auth no runtime.
-    if (!docsOnly) {
-        await app.register(prismaPlugin);
-        await app.register(authPlugin);
-    }
+    await app.register(prismaPlugin);
+    await app.register(authPlugin);
     await app.register(healthRoutes);
-    await app.register(dbRoutes);
     await app.register(servicesRoutes);
     await app.register(businessHoursRoutes);
     await app.register(businessDaysRoutes);

@@ -1,5 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { Type, type Static } from "@sinclair/typebox";
+import { createRepositories } from "../infra/prisma/repositories.js";
+import { listBusinessHours } from "../application/usecases/business/listBusinessHours.js";
+import { replaceBusinessBreaks } from "../application/usecases/business/replaceBusinessBreaks.js";
+import { updateBusinessHours } from "../application/usecases/business/updateBusinessHours.js";
 
 const TimeString = Type.String({ pattern: "^\\d{2}:\\d{2}$" });
 
@@ -33,10 +37,8 @@ export const businessHoursRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async () => {
-      return app.prisma.businessHours.findMany({
-        orderBy: { dayOfWeek: "asc" },
-        include: { breaks: true },
-      });
+      const repos = createRepositories(app.prisma);
+      return listBusinessHours(repos);
     }
   );
 
@@ -52,20 +54,10 @@ export const businessHoursRoutes: FastifyPluginAsync = async (app) => {
     },
     async (req) => {
       const body = req.body as BusinessHoursItemT[];
-      await app.prisma.$transaction(
-        body.map((item) =>
-          app.prisma.businessHours.upsert({
-            where: { dayOfWeek: item.dayOfWeek },
-            create: item,
-            update: item,
-          })
-        )
-      );
 
-      return app.prisma.businessHours.findMany({
-        orderBy: { dayOfWeek: "asc" },
-        include: { breaks: true },
-      });
+      const repos = createRepositories(app.prisma);
+      await updateBusinessHours(repos, body);
+      return listBusinessHours(repos);
     }
   );
 
@@ -80,31 +72,14 @@ export const businessHoursRoutes: FastifyPluginAsync = async (app) => {
         description: "Atualiza os intervalos de pausa de um dia",
       },
     },
-    async (req, reply) => {
+    async (req) => {
       const params = req.params as DayOfWeekParamsT;
       const body = req.body as BreakItemT[];
-      const bh = await app.prisma.businessHours.findUnique({
-        where: { dayOfWeek: params.dayOfWeek },
-      });
 
-      if (!bh) {
-        return reply.status(404).send({ message: "BusinessHours não configurado para esse dia" });
-      }
-
-      await app.prisma.$transaction([
-        app.prisma.businessBreak.deleteMany({ where: { businessHoursId: bh.id } }),
-        app.prisma.businessBreak.createMany({
-          data: body.map((b) => ({
-            businessHoursId: bh.id,
-            startTime: b.startTime,
-            endTime: b.endTime,
-          })),
-        }),
-      ]);
-
-      return app.prisma.businessHours.findUnique({
-        where: { dayOfWeek: params.dayOfWeek },
-        include: { breaks: true },
+      const repos = createRepositories(app.prisma);
+      return replaceBusinessBreaks(repos, {
+        dayOfWeek: params.dayOfWeek,
+        breaks: body.map((b) => ({ startTime: b.startTime, endTime: b.endTime })),
       });
     }
   );
