@@ -1,0 +1,10 @@
+{
+  "builds": [{ "src": "public/**", "use": "@vercel/static" }],
+  "routes": [
+    { "src": "^/$", "status": 302, "headers": { "Location": "/docs/" } },
+    { "src": "^/docs$", "status": 308, "headers": { "Location": "/docs/" } },
+    { "src": "^/docs/$", "dest": "/docs/index.html" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "status": 404 }
+  ]
+}
