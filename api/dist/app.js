@@ -71,10 +71,6 @@ export async function buildApp() {
             return url.startsWith("/health/") || url.startsWith("/docs") || url.startsWith("/documentation/");
         },
     });
-    // Redirect raiz para docs (registrar ANTES do swagger)
-    app.get("/", async (_, reply) => {
-        return reply.redirect("/docs");
-    });
     await app.register(swaggerPlugin);
     await app.register(prismaPlugin);
     await app.register(authPlugin);
@@ -84,10 +80,24 @@ export async function buildApp() {
     await app.register(businessDaysRoutes);
     await app.register(slotsRoutes);
     await app.register(appointmentsRoutes);
+    // Redirect raiz para docs (registrar DEPOIS de todas as rotas)
+    app.get("/", async (request, reply) => {
+        request.log.info("Root access, redirecting to /docs");
+        return reply.redirect("/docs");
+    });
     // Rota de diagnóstico (remover após confirmar que funciona)
     app.get("/debug/routes", async (req, reply) => {
         const routes = app.printRoutes({ commonPrefix: false });
         return reply.type("text/plain").send(routes);
+    });
+    // 404 handler
+    app.setNotFoundHandler((request, reply) => {
+        request.log.warn({ url: request.url, method: request.method }, "Route not found");
+        return reply.status(404).send({
+            message: "Route not found",
+            path: request.url,
+            method: request.method,
+        });
     });
     return app;
 }
