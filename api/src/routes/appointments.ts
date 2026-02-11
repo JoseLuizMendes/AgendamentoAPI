@@ -11,10 +11,11 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
   // GET /appointments - List appointments with optional filters
   app.get("/appointments", async (req, reply) => {
     const query = AppointmentQuerySchema.parse(req.query);
-    const appointments = await appointmentService.listAppointments(app.prisma, {
-      serviceId: query.serviceId,
-      status: query.status,
-    });
+    const filters: { serviceId?: number; status?: string } = {};
+    if (query.serviceId !== undefined) filters.serviceId = query.serviceId;
+    if (query.status !== undefined) filters.status = query.status;
+    
+    const appointments = await appointmentService.listAppointments(app.prisma, filters);
     return reply.send(appointments);
   });
 

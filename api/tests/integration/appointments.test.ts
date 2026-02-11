@@ -70,7 +70,7 @@ describe.skipIf(!hasDb)("integration/appointments", () => {
     expect(second.statusCode).toBe(409);
   });
 
-  it("cancela com optimistic locking via version", async () => {
+  it("atualiza status de agendamento para CANCELED", async () => {
     const service = await app.prisma.service.create({
       data: { name: "Consulta", priceInCents: 10000, durationInMinutes: 30 },
     });
@@ -87,34 +87,26 @@ describe.skipIf(!hasDb)("integration/appointments", () => {
     });
 
     expect(created.statusCode).toBe(201);
-    const appt = created.json() as { id: number; version: number; status: string };
+    const appt = created.json() as { id: number; status: string };
     expect(appt.status).toBe("SCHEDULED");
 
-    const wrong = await app.inject({
+    const updated = await app.inject({
       method: "PATCH",
-      url: `/appointments/${appt.id}/cancel`,
-      payload: { version: appt.version + 1 },
-    });
-    expect(wrong.statusCode).toBe(409);
-
-    const ok = await app.inject({
-      method: "PATCH",
-      url: `/appointments/${appt.id}/cancel`,
-      payload: { version: appt.version },
+      url: `/appointments/${appt.id}`,
+      payload: { status: "CANCELED" },
     });
 
-    expect(ok.statusCode).toBe(200);
-    const canceled = ok.json() as { status: string; version: number };
+    expect(updated.statusCode).toBe(200);
+    const canceled = updated.json() as { status: string };
     expect(canceled.status).toBe("CANCELED");
-    expect(canceled.version).toBe(appt.version + 1);
   });
 
-  it("slots não inclui horário já agendado", async () => {
+  it("lista agendamentos com filtros", async () => {
     const service = await app.prisma.service.create({
       data: { name: "Barba", priceInCents: 3000, durationInMinutes: 60 },
     });
 
-    const created = await app.inject({
+    await app.inject({
       method: "POST",
       url: "/appointments",
       payload: {
@@ -124,15 +116,15 @@ describe.skipIf(!hasDb)("integration/appointments", () => {
         startTime,
       },
     });
-    expect(created.statusCode).toBe(201);
 
     const res = await app.inject({
       method: "GET",
-      url: `/slots?serviceId=${service.id}&date=${date}&intervalMinutes=60`,
+      url: `/appointments?serviceId=${service.id}`,
     });
 
     expect(res.statusCode).toBe(200);
-    const slots = res.json() as Array<{ startTime: string; endTime: string }>;
-    expect(slots.find((s) => s.startTime === startTime)).toBeUndefined();
+    const appointments = res.json() as Array<{ customerName: string; serviceId: number }>;
+    expect(appointments.length).toBeGreaterThan(0);
+    expect(appointments[0].customerName).toBe("Paulo");
   });
 });

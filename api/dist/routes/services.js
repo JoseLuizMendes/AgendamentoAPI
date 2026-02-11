@@ -1,104 +1,36 @@
-import { Type } from "@sinclair/typebox";
-import { ErrorResponse } from "../schemas/http.js";
-import { createRepositories } from "../infra/prisma/repositories.js";
-import { createService } from "../application/usecases/services/createService.js";
-import { deleteService } from "../application/usecases/services/deleteService.js";
-import { getService } from "../application/usecases/services/getService.js";
-import { listServices } from "../application/usecases/services/listServices.js";
-import { updateService } from "../application/usecases/services/updateService.js";
-const ServiceBody = Type.Object({
-    name: Type.String({ minLength: 1, maxLength: 200 }),
-    priceInCents: Type.Integer({ minimum: 0 }),
-    durationInMinutes: Type.Integer({ minimum: 1, maximum: 24 * 60 }),
-}, { additionalProperties: false });
-const ServiceParams = Type.Object({
-    id: Type.Integer({ minimum: 1 }),
-});
-const ServiceResponse = Type.Object({
-    id: Type.Integer(),
-    name: Type.String(),
-    priceInCents: Type.Integer(),
-    durationInMinutes: Type.Integer(),
-    createdAt: Type.String(),
-    updatedAt: Type.String(),
-});
+import { ServiceCreateSchema, ServiceUpdateSchema, ServiceParamsSchema, } from "../schemas/index.js";
+import * as serviceService from "../services/services.js";
 export const servicesRoutes = async (app) => {
-    app.get("/services", {
-        schema: {
-            tags: ["services"],
-            response: {
-                200: Type.Array(ServiceResponse),
-            },
-        },
-    }, async () => {
-        const repos = createRepositories(app.prisma);
-        return listServices(repos);
+    // GET /services - List all services
+    app.get("/services", async (req, reply) => {
+        const services = await serviceService.listServices(app.prisma);
+        return reply.send(services);
     });
-    app.get("/services/:id", {
-        schema: {
-            tags: ["services"],
-            params: ServiceParams,
-            response: {
-                200: ServiceResponse,
-                404: ErrorResponse,
-            },
-        },
-    }, async (req) => {
-        const params = req.params;
-        const repos = createRepositories(app.prisma);
-        return getService(repos, params.id);
+    // POST /services - Create service
+    app.post("/services", async (req, reply) => {
+        const body = ServiceCreateSchema.parse(req.body);
+        const service = await serviceService.createService(app.prisma, body);
+        return reply.status(201).send(service);
     });
-    app.post("/services", {
-        schema: {
-            tags: ["services"],
-            body: ServiceBody,
-            response: {
-                201: ServiceResponse,
-            },
-        },
-    }, async (req, reply) => {
-        const body = req.body;
-        const repos = createRepositories(app.prisma);
-        const created = await createService(repos, {
-            name: body.name,
-            priceInCents: body.priceInCents,
-            durationInMinutes: body.durationInMinutes,
-        });
-        return reply.status(201).send(created);
+    // PUT /services/:id - Update service
+    app.put("/services/:id", async (req, reply) => {
+        const params = ServiceParamsSchema.parse(req.params);
+        const body = ServiceUpdateSchema.parse(req.body);
+        const data = {};
+        if (body.name !== undefined)
+            data.name = body.name;
+        if (body.priceInCents !== undefined)
+            data.priceInCents = body.priceInCents;
+        if (body.durationInMinutes !== undefined)
+            data.durationInMinutes = body.durationInMinutes;
+        const service = await serviceService.updateService(app.prisma, params.id, data);
+        return reply.send(service);
     });
-    app.put("/services/:id", {
-        schema: {
-            tags: ["services"],
-            params: ServiceParams,
-            body: ServiceBody,
-            response: {
-                200: ServiceResponse,
-            },
-        },
-    }, async (req) => {
-        const params = req.params;
-        const body = req.body;
-        const repos = createRepositories(app.prisma);
-        return updateService(repos, {
-            id: params.id,
-            name: body.name,
-            priceInCents: body.priceInCents,
-            durationInMinutes: body.durationInMinutes,
-        });
-    });
-    app.delete("/services/:id", {
-        schema: {
-            tags: ["services"],
-            params: ServiceParams,
-            response: {
-                204: Type.Null(),
-            },
-        },
-    }, async (req, reply) => {
-        const params = req.params;
-        const repos = createRepositories(app.prisma);
-        await deleteService(repos, params.id);
-        return reply.status(204).send(null);
+    // DELETE /services/:id - Delete service
+    app.delete("/services/:id", async (req, reply) => {
+        const params = ServiceParamsSchema.parse(req.params);
+        await serviceService.deleteService(app.prisma, params.id);
+        return reply.status(204).send();
     });
 };
 //# sourceMappingURL=services.js.map

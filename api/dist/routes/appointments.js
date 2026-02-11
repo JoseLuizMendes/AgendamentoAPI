@@ -1,96 +1,51 @@
-import { Type } from "@sinclair/typebox";
-import { getNotificationsQueue } from "../queues/notifications.js";
-import { ErrorResponse } from "../schemas/http.js";
-import { createTransactionManager } from "../infra/prisma/transactionManager.js";
-import { createAppointment } from "../application/usecases/appointments/createAppointment.js";
-import { cancelAppointment } from "../application/usecases/appointments/cancelAppointment.js";
-import { createRepositories } from "../infra/prisma/repositories.js";
-const AppointmentCreateBody = Type.Object({
-    customerName: Type.String({ minLength: 1, maxLength: 200 }),
-    customerPhone: Type.String({ minLength: 6, maxLength: 30 }),
-    serviceId: Type.Integer({ minimum: 1 }),
-    startTime: Type.String({ minLength: 10, maxLength: 40 }),
-});
-const AppointmentResponse = Type.Object({
-    id: Type.Integer(),
-    customerName: Type.String(),
-    customerPhone: Type.String(),
-    serviceId: Type.Integer(),
-    startTime: Type.String(),
-    endTime: Type.String(),
-    status: Type.String(),
-    version: Type.Integer(),
-    createdAt: Type.String(),
-    updatedAt: Type.String(),
-});
-const AppointmentParams = Type.Object({
-    id: Type.Integer({ minimum: 1 }),
-});
-const AppointmentCancelBody = Type.Object({
-    version: Type.Integer({ minimum: 0 }),
-});
+import { AppointmentCreateSchema, AppointmentUpdateSchema, AppointmentParamsSchema, AppointmentQuerySchema, } from "../schemas/index.js";
+import * as appointmentService from "../services/appointments.js";
 export const appointmentsRoutes = async (app) => {
-    app.post("/appointments", {
-        schema: {
-            tags: ["appointments"],
-            body: AppointmentCreateBody,
-            response: {
-                201: AppointmentResponse,
-                400: ErrorResponse,
-                404: ErrorResponse,
-                409: ErrorResponse,
-            },
-            description: "Cria um novo agendamento",
-        },
-    }, async (req, reply) => {
-        const body = req.body;
-        const startTime = new Date(body.startTime);
-        if (Number.isNaN(startTime.getTime())) {
-            return reply.status(400).send({ message: "startTime inválido" });
-        }
-        const tx = createTransactionManager(app.prisma);
-        const created = await createAppointment(tx, {
+    // GET /appointments - List appointments with optional filters
+    app.get("/appointments", async (req, reply) => {
+        const query = AppointmentQuerySchema.parse(req.query);
+        const filters = {};
+        if (query.serviceId !== undefined)
+            filters.serviceId = query.serviceId;
+        if (query.status !== undefined)
+            filters.status = query.status;
+        const appointments = await appointmentService.listAppointments(app.prisma, filters);
+        return reply.send(appointments);
+    });
+    // GET /appointments/:id - Get appointment details
+    app.get("/appointments/:id", async (req, reply) => {
+        const params = AppointmentParamsSchema.parse(req.params);
+        const appointment = await appointmentService.getAppointment(app.prisma, params.id);
+        return reply.send(appointment);
+    });
+    // POST /appointments - Create new appointment
+    app.post("/appointments", async (req, reply) => {
+        const body = AppointmentCreateSchema.parse(req.body);
+        const appointment = await appointmentService.createAppointment(app.prisma, {
             customerName: body.customerName,
             customerPhone: body.customerPhone,
             serviceId: body.serviceId,
-            startTime,
+            startTime: new Date(body.startTime),
         });
-        // Notificação assíncrona (best-effort)
-        try {
-            const queue = getNotificationsQueue();
-            await queue.add("appointment.created", {
-                appointmentId: created.id,
-                customerName: created.customerName,
-                customerPhone: created.customerPhone,
-                serviceId: created.serviceId,
-                startTime: created.startTime.toISOString(),
-                endTime: created.endTime.toISOString(),
-            });
-        }
-        catch (err) {
-            app.log.error({ err }, "Falha ao enfileirar notificação");
-        }
-        return reply.status(201).send(created);
+        return reply.status(201).send(appointment);
     });
-    // Exemplo de optimistic locking via version (evita updates concorrentes)
-    app.patch("/appointments/:id/cancel", {
-        schema: {
-            tags: ["appointments"],
-            params: AppointmentParams,
-            body: AppointmentCancelBody,
-            response: {
-                200: AppointmentResponse,
-                404: ErrorResponse,
-                409: ErrorResponse,
-            },
-            description: "Cancela um agendamento",
-        },
-    }, async (req, reply) => {
-        const params = req.params;
-        const body = req.body;
-        const repos = createRepositories(app.prisma);
-        const appointment = await cancelAppointment(repos, { id: params.id, version: body.version });
+    // PATCH /appointments/:id - Update appointment
+    app.patch("/appointments/:id", async (req, reply) => {
+        const params = AppointmentParamsSchema.parse(req.params);
+        const body = AppointmentUpdateSchema.parse(req.body);
+        const updateData = {};
+        if (body.status)
+            updateData.status = body.status;
+        if (body.startTime)
+            updateData.startTime = new Date(body.startTime);
+        const appointment = await appointmentService.updateAppointment(app.prisma, params.id, updateData);
         return reply.send(appointment);
+    });
+    // DELETE /appointments/:id - Cancel/delete appointment
+    app.delete("/appointments/:id", async (req, reply) => {
+        const params = AppointmentParamsSchema.parse(req.params);
+        await appointmentService.deleteAppointment(app.prisma, params.id);
+        return reply.status(204).send();
     });
 };
 //# sourceMappingURL=appointments.js.map

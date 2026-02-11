@@ -18,7 +18,10 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
   // POST /users - Create user
   app.post("/users", async (req, reply) => {
     const body = UserCreateSchema.parse(req.body);
-    const user = await userService.createUser(app.prisma, body);
+    const data: { email: string; name?: string } = { email: body.email };
+    if (body.name !== undefined) data.name = body.name;
+    
+    const user = await userService.createUser(app.prisma, data);
     return reply.status(201).send(user);
   });
 
@@ -26,7 +29,11 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
   app.put("/users/:id", async (req, reply) => {
     const params = UserParamsSchema.parse(req.params);
     const body = UserUpdateSchema.parse(req.body);
-    const user = await userService.updateUser(app.prisma, params.id, body);
+    const data: { email?: string; name?: string } = {};
+    if (body.email !== undefined) data.email = body.email;
+    if (body.name !== undefined) data.name = body.name;
+    
+    const user = await userService.updateUser(app.prisma, params.id, data);
     return reply.send(user);
   });
 

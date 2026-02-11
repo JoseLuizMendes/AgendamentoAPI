@@ -31,8 +31,8 @@ export async function createOverride(
   return prisma.businessDateOverride.create({
     data: {
       date: data.date,
-      openTime: data.openTime,
-      closeTime: data.closeTime,
+      ...(data.openTime !== undefined && { openTime: data.openTime }),
+      ...(data.closeTime !== undefined && { closeTime: data.closeTime }),
       isOff: data.isOff ?? false,
     },
   });

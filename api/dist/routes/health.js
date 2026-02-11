@@ -2,14 +2,13 @@ export const healthRoutes = async (app) => {
     app.get("/health/live", async () => {
         return { status: "ok" };
     });
-    app.get("/health/ready", async (req, reply) => {
+    app.get("/health/ready", async () => {
         try {
-            await app.prisma.user.count();
-            return { status: "ok", db: "connected" };
+            await app.prisma.$queryRaw `SELECT 1`;
+            return { status: "ok", database: "connected" };
         }
-        catch (err) {
-            req.log.error({ err }, "Readiness failed");
-            return reply.code(503).send({ status: "fail", db: "disconnected" });
+        catch (error) {
+            return { status: "error", database: "disconnected" };
         }
     });
 };

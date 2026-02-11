@@ -27,7 +27,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
     // Handle Zod validation errors
     if (err instanceof ZodError) {
-      const errors = err.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
+      const errors = err.issues.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
       return reply.status(400).send({ message: `Validation error: ${errors}` });
     }
 

@@ -24,7 +24,16 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
   app.put("/services/:id", async (req, reply) => {
     const params = ServiceParamsSchema.parse(req.params);
     const body = ServiceUpdateSchema.parse(req.body);
-    const service = await serviceService.updateService(app.prisma, params.id, body);
+    const data: {
+      name?: string;
+      priceInCents?: number;
+      durationInMinutes?: number;
+    } = {};
+    if (body.name !== undefined) data.name = body.name;
+    if (body.priceInCents !== undefined) data.priceInCents = body.priceInCents;
+    if (body.durationInMinutes !== undefined) data.durationInMinutes = body.durationInMinutes;
+    
+    const service = await serviceService.updateService(app.prisma, params.id, data);
     return reply.send(service);
   });
 

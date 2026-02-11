@@ -5,7 +5,7 @@ export async function createUser(prisma: PrismaClient, data: { email: string; na
   return prisma.user.create({
     data: {
       email: data.email,
-      name: data.name,
+      ...(data.name !== undefined && { name: data.name }),
     },
   });
 }

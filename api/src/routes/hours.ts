@@ -16,7 +16,19 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
   // POST /hours - Create business hours
   app.post("/hours", async (req, reply) => {
     const body = BusinessHoursCreateSchema.parse(req.body);
-    const hours = await hoursService.createBusinessHours(app.prisma, body);
+    const data: {
+      dayOfWeek: number;
+      openTime: string;
+      closeTime: string;
+      isOff?: boolean;
+    } = {
+      dayOfWeek: body.dayOfWeek,
+      openTime: body.openTime,
+      closeTime: body.closeTime,
+    };
+    if (body.isOff !== undefined) data.isOff = body.isOff;
+    
+    const hours = await hoursService.createBusinessHours(app.prisma, data);
     return reply.status(201).send(hours);
   });
 
@@ -24,7 +36,16 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
   app.put("/hours/:id", async (req, reply) => {
     const params = BusinessHoursParamsSchema.parse(req.params);
     const body = BusinessHoursUpdateSchema.parse(req.body);
-    const hours = await hoursService.updateBusinessHours(app.prisma, params.id, body);
+    const data: {
+      openTime?: string;
+      closeTime?: string;
+      isOff?: boolean;
+    } = {};
+    if (body.openTime !== undefined) data.openTime = body.openTime;
+    if (body.closeTime !== undefined) data.closeTime = body.closeTime;
+    if (body.isOff !== undefined) data.isOff = body.isOff;
+    
+    const hours = await hoursService.updateBusinessHours(app.prisma, params.id, data);
     return reply.send(hours);
   });
 

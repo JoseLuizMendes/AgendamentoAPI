@@ -16,7 +16,19 @@ export const overridesRoutes: FastifyPluginAsync = async (app) => {
   // POST /overrides - Create override
   app.post("/overrides", async (req, reply) => {
     const body = OverrideCreateSchema.parse(req.body);
-    const override = await overrideService.createOverride(app.prisma, body);
+    const data: {
+      date: string;
+      openTime?: string;
+      closeTime?: string;
+      isOff?: boolean;
+    } = {
+      date: body.date,
+    };
+    if (body.openTime !== undefined) data.openTime = body.openTime;
+    if (body.closeTime !== undefined) data.closeTime = body.closeTime;
+    if (body.isOff !== undefined) data.isOff = body.isOff;
+    
+    const override = await overrideService.createOverride(app.prisma, data);
     return reply.status(201).send(override);
   });
 
@@ -24,7 +36,16 @@ export const overridesRoutes: FastifyPluginAsync = async (app) => {
   app.put("/overrides/:id", async (req, reply) => {
     const params = OverrideParamsSchema.parse(req.params);
     const body = OverrideUpdateSchema.parse(req.body);
-    const override = await overrideService.updateOverride(app.prisma, params.id, body);
+    const data: {
+      openTime?: string;
+      closeTime?: string;
+      isOff?: boolean;
+    } = {};
+    if (body.openTime !== undefined) data.openTime = body.openTime;
+    if (body.closeTime !== undefined) data.closeTime = body.closeTime;
+    if (body.isOff !== undefined) data.isOff = body.isOff;
+    
+    const override = await overrideService.updateOverride(app.prisma, params.id, data);
     return reply.send(override);
   });
 
