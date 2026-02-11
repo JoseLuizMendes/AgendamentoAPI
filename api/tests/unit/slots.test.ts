@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateAvailableSlots, isSlotWithinBusinessHours } from "../../src/lib/slots.js";
+import { calculateAvailableSlots, isSlotWithinBusinessHours } from "../../src/utils/slots.js";
 
 const date = "2026-01-16";
 

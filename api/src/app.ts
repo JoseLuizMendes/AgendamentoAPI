@@ -1,16 +1,17 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { Prisma } from "@prisma/client";
+import { ZodError } from "zod";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import prismaPlugin from "./plugins/prisma.js";
 import swaggerPlugin from "./plugins/docs/swagger.js";
 import authPlugin from "./plugins/auth.js";
-import { AppError } from "./application/errors.js";
+import { AppError } from "./utils/errors.js";
 import { healthRoutes } from "./routes/health.js";
+import { usersRoutes } from "./routes/users.js";
 import { servicesRoutes } from "./routes/services.js";
-import { businessHoursRoutes } from "./routes/businessHours.js";
-import { businessDaysRoutes } from "./routes/businessDays.js";
-import { slotsRoutes } from "./routes/slots.js";
+import { hoursRoutes } from "./routes/hours.js";
+import { overridesRoutes } from "./routes/overrides.js";
 import { appointmentsRoutes } from "./routes/appointments.js";
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -19,11 +20,18 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   app.setErrorHandler((err, req, reply) => {
+    // Handle custom app errors
     if (err instanceof AppError) {
       return reply.status(err.statusCode).send({ message: err.message });
     }
 
-    // Erros de validação (AJV)
+    // Handle Zod validation errors
+    if (err instanceof ZodError) {
+      const errors = err.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
+      return reply.status(400).send({ message: `Validation error: ${errors}` });
+    }
+
+    // Erros de validação (AJV/Fastify)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const anyErr = err as any;
     if (anyErr?.validation) {
@@ -84,10 +92,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(authPlugin);
 
   await app.register(healthRoutes);
+  await app.register(usersRoutes);
   await app.register(servicesRoutes);
-  await app.register(businessHoursRoutes);
-  await app.register(businessDaysRoutes);
-  await app.register(slotsRoutes);
+  await app.register(hoursRoutes);
+  await app.register(overridesRoutes);
   await app.register(appointmentsRoutes);
 
   return app;

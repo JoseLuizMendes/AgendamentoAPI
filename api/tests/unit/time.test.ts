@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertIsoDate, dateAtUtcTime, parseTimeToMinutes, toDayOfWeekUtc } from "../../src/lib/time.js";
+import { assertIsoDate, dateAtUtcTime, parseTimeToMinutes, toDayOfWeekUtc } from "../../src/utils/time.js";
 
 describe("lib/time", () => {
   it("parseTimeToMinutes converte HH:MM", () => {
