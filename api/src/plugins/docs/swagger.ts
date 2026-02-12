@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
 import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
 
 const swaggerPlugin: FastifyPluginAsync = async (app) => {
   await app.register(swagger, {
@@ -21,6 +22,14 @@ const swaggerPlugin: FastifyPluginAsync = async (app) => {
         },
       },
       security: [{ apiKey: [] }],
+    },
+  });
+
+  await app.register(swaggerUi, {
+    routePrefix: "/documentation",
+    uiConfig: {
+      docExpansion: "list",
+      deepLinking: true,
     },
   });
 
