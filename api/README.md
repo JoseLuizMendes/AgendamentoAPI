@@ -71,6 +71,17 @@ api/
 # Instalar dependências
 pnpm install
 
+# Subir Postgres local (Docker)
+docker run --name agendamento-db \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=agendamento \
+  -p 5432:5432 \
+  -d postgres:16
+
+# Criar .env a partir do exemplo e ajustar se necessário
+cp .env.example .env
+
 # Rodar migrações
 pnpm prisma:migrate
 

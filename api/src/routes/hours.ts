@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   BusinessHoursCreateSchema,
   BusinessHoursUpdateSchema,
@@ -7,15 +8,33 @@ import {
 import * as hoursService from "../services/hours.js";
 
 export const hoursRoutes: FastifyPluginAsync = async (app) => {
+  const zApp = app.withTypeProvider<ZodTypeProvider>();
+
   // GET /hours - List all business hours
-  app.get("/hours", async (req, reply) => {
+  zApp.get(
+    "/hours",
+    {
+      schema: {
+        tags: ["BusinessHours"],
+      },
+    },
+    async (_req, reply) => {
     const hours = await hoursService.listBusinessHours(app.prisma);
     return reply.send(hours);
-  });
+    }
+  );
 
   // POST /hours - Create business hours
-  app.post("/hours", async (req, reply) => {
-    const body = BusinessHoursCreateSchema.parse(req.body);
+  zApp.post(
+    "/hours",
+    {
+      schema: {
+        tags: ["BusinessHours"],
+        body: BusinessHoursCreateSchema,
+      },
+    },
+    async (req, reply) => {
+    const body = req.body;
     const data: {
       dayOfWeek: number;
       openTime: string;
@@ -30,12 +49,22 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
     
     const hours = await hoursService.createBusinessHours(app.prisma, data);
     return reply.status(201).send(hours);
-  });
+    }
+  );
 
   // PUT /hours/:id - Update business hours
-  app.put("/hours/:id", async (req, reply) => {
-    const params = BusinessHoursParamsSchema.parse(req.params);
-    const body = BusinessHoursUpdateSchema.parse(req.body);
+  zApp.put(
+    "/hours/:id",
+    {
+      schema: {
+        tags: ["BusinessHours"],
+        params: BusinessHoursParamsSchema,
+        body: BusinessHoursUpdateSchema,
+      },
+    },
+    async (req, reply) => {
+    const params = req.params;
+    const body = req.body;
     const data: {
       openTime?: string;
       closeTime?: string;
@@ -47,12 +76,21 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
     
     const hours = await hoursService.updateBusinessHours(app.prisma, params.id, data);
     return reply.send(hours);
-  });
+    }
+  );
 
   // DELETE /hours/:id - Delete business hours
-  app.delete("/hours/:id", async (req, reply) => {
-    const params = BusinessHoursParamsSchema.parse(req.params);
-    await hoursService.deleteBusinessHours(app.prisma, params.id);
+  zApp.delete(
+    "/hours/:id",
+    {
+      schema: {
+        tags: ["BusinessHours"],
+        params: BusinessHoursParamsSchema,
+      },
+    },
+    async (req, reply) => {
+    await hoursService.deleteBusinessHours(app.prisma, req.params.id);
     return reply.status(204).send();
-  });
+    }
+  );
 };

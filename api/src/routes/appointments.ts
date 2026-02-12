@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   AppointmentCreateSchema,
   AppointmentUpdateSchema,
@@ -8,27 +9,54 @@ import {
 import * as appointmentService from "../services/appointments.js";
 
 export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
+  const zApp = app.withTypeProvider<ZodTypeProvider>();
+
   // GET /appointments - List appointments with optional filters
-  app.get("/appointments", async (req, reply) => {
-    const query = AppointmentQuerySchema.parse(req.query);
+  zApp.get(
+    "/appointments",
+    {
+      schema: {
+        tags: ["Appointments"],
+        querystring: AppointmentQuerySchema,
+      },
+    },
+    async (req, reply) => {
+    const query = req.query;
     const filters: { serviceId?: number; status?: string } = {};
     if (query.serviceId !== undefined) filters.serviceId = query.serviceId;
     if (query.status !== undefined) filters.status = query.status;
     
     const appointments = await appointmentService.listAppointments(app.prisma, filters);
     return reply.send(appointments);
-  });
+    }
+  );
 
   // GET /appointments/:id - Get appointment details
-  app.get("/appointments/:id", async (req, reply) => {
-    const params = AppointmentParamsSchema.parse(req.params);
-    const appointment = await appointmentService.getAppointment(app.prisma, params.id);
+  zApp.get(
+    "/appointments/:id",
+    {
+      schema: {
+        tags: ["Appointments"],
+        params: AppointmentParamsSchema,
+      },
+    },
+    async (req, reply) => {
+    const appointment = await appointmentService.getAppointment(app.prisma, req.params.id);
     return reply.send(appointment);
-  });
+    }
+  );
 
   // POST /appointments - Create new appointment
-  app.post("/appointments", async (req, reply) => {
-    const body = AppointmentCreateSchema.parse(req.body);
+  zApp.post(
+    "/appointments",
+    {
+      schema: {
+        tags: ["Appointments"],
+        body: AppointmentCreateSchema,
+      },
+    },
+    async (req, reply) => {
+    const body = req.body;
     const appointment = await appointmentService.createAppointment(app.prisma, {
       customerName: body.customerName,
       customerPhone: body.customerPhone,
@@ -36,12 +64,22 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       startTime: new Date(body.startTime),
     });
     return reply.status(201).send(appointment);
-  });
+    }
+  );
 
   // PATCH /appointments/:id - Update appointment
-  app.patch("/appointments/:id", async (req, reply) => {
-    const params = AppointmentParamsSchema.parse(req.params);
-    const body = AppointmentUpdateSchema.parse(req.body);
+  zApp.patch(
+    "/appointments/:id",
+    {
+      schema: {
+        tags: ["Appointments"],
+        params: AppointmentParamsSchema,
+        body: AppointmentUpdateSchema,
+      },
+    },
+    async (req, reply) => {
+    const params = req.params;
+    const body = req.body;
     
     const updateData: any = {};
     if (body.status) updateData.status = body.status;
@@ -53,12 +91,21 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       updateData
     );
     return reply.send(appointment);
-  });
+    }
+  );
 
   // DELETE /appointments/:id - Cancel/delete appointment
-  app.delete("/appointments/:id", async (req, reply) => {
-    const params = AppointmentParamsSchema.parse(req.params);
-    await appointmentService.deleteAppointment(app.prisma, params.id);
+  zApp.delete(
+    "/appointments/:id",
+    {
+      schema: {
+        tags: ["Appointments"],
+        params: AppointmentParamsSchema,
+      },
+    },
+    async (req, reply) => {
+    await appointmentService.deleteAppointment(app.prisma, req.params.id);
     return reply.status(204).send();
-  });
+    }
+  );
 };

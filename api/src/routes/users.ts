@@ -1,46 +1,81 @@
 import type { FastifyPluginAsync } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { 
   UserCreateSchema, 
   UserUpdateSchema, 
   UserParamsSchema,
-  ErrorResponseSchema 
 } from "../schemas/index.js";
 import * as userService from "../services/users.js";
 
 export const usersRoutes: FastifyPluginAsync = async (app) => {
+  const zApp = app.withTypeProvider<ZodTypeProvider>();
+
   // GET /users/:id - Get user
-  app.get("/users/:id", async (req, reply) => {
-    const params = UserParamsSchema.parse(req.params);
-    const user = await userService.getUser(app.prisma, params.id);
-    return reply.send(user);
-  });
+  zApp.get(
+    "/users/:id",
+    {
+      schema: {
+        tags: ["Users"],
+        params: UserParamsSchema,
+      },
+    },
+    async (req, reply) => {
+      const user = await userService.getUser(app.prisma, req.params.id);
+      return reply.send(user);
+    }
+  );
 
   // POST /users - Create user
-  app.post("/users", async (req, reply) => {
-    const body = UserCreateSchema.parse(req.body);
-    const data: { email: string; name?: string } = { email: body.email };
-    if (body.name !== undefined) data.name = body.name;
-    
-    const user = await userService.createUser(app.prisma, data);
-    return reply.status(201).send(user);
-  });
+  zApp.post(
+    "/users",
+    {
+      schema: {
+        tags: ["Users"],
+        body: UserCreateSchema,
+      },
+    },
+    async (req, reply) => {
+      const data: { email: string; name?: string } = {
+        email: req.body.email,
+        ...(req.body.name !== undefined ? { name: req.body.name } : {}),
+      };
+      const user = await userService.createUser(app.prisma, data);
+      return reply.status(201).send(user);
+    }
+  );
 
   // PUT /users/:id - Update user
-  app.put("/users/:id", async (req, reply) => {
-    const params = UserParamsSchema.parse(req.params);
-    const body = UserUpdateSchema.parse(req.body);
-    const data: { email?: string; name?: string } = {};
-    if (body.email !== undefined) data.email = body.email;
-    if (body.name !== undefined) data.name = body.name;
-    
-    const user = await userService.updateUser(app.prisma, params.id, data);
-    return reply.send(user);
-  });
+  zApp.put(
+    "/users/:id",
+    {
+      schema: {
+        tags: ["Users"],
+        params: UserParamsSchema,
+        body: UserUpdateSchema,
+      },
+    },
+    async (req, reply) => {
+      const data: { email?: string; name?: string } = {};
+      if (req.body.email !== undefined) data.email = req.body.email;
+      if (req.body.name !== undefined) data.name = req.body.name;
+
+      const user = await userService.updateUser(app.prisma, req.params.id, data);
+      return reply.send(user);
+    }
+  );
 
   // DELETE /users/:id - Delete user
-  app.delete("/users/:id", async (req, reply) => {
-    const params = UserParamsSchema.parse(req.params);
-    await userService.deleteUser(app.prisma, params.id);
-    return reply.status(204).send();
-  });
+  zApp.delete(
+    "/users/:id",
+    {
+      schema: {
+        tags: ["Users"],
+        params: UserParamsSchema,
+      },
+    },
+    async (req, reply) => {
+      await userService.deleteUser(app.prisma, req.params.id);
+      return reply.status(204).send();
+    }
+  );
 };

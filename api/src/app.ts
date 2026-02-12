@@ -13,13 +13,25 @@ import { servicesRoutes } from "./routes/services.js";
 import { hoursRoutes } from "./routes/hours.js";
 import { overridesRoutes } from "./routes/overrides.js";
 import { appointmentsRoutes } from "./routes/appointments.js";
+import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from "fastify-type-provider-zod";
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: true,
-  });
+  }).withTypeProvider<ZodTypeProvider>();
+
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
 
   app.setErrorHandler((err, req, reply) => {
+    // Erro comum em ambiente local: DB não configurado
+    if (err instanceof Error) {
+      const isProd = (process.env["NODE_ENV"] ?? "development") === "production";
+      if (!isProd && err.message.includes("DATABASE_URL não está definido")) {
+        return reply.status(500).send({ message: err.message });
+      }
+    }
+
     // Handle custom app errors
     if (err instanceof AppError) {
       return reply.status(err.statusCode).send({ message: err.message });

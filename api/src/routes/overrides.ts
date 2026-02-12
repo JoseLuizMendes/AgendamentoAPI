@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   OverrideCreateSchema,
   OverrideUpdateSchema,
@@ -7,15 +8,33 @@ import {
 import * as overrideService from "../services/overrides.js";
 
 export const overridesRoutes: FastifyPluginAsync = async (app) => {
+  const zApp = app.withTypeProvider<ZodTypeProvider>();
+
   // GET /overrides - List all overrides
-  app.get("/overrides", async (req, reply) => {
+  zApp.get(
+    "/overrides",
+    {
+      schema: {
+        tags: ["Overrides"],
+      },
+    },
+    async (_req, reply) => {
     const overrides = await overrideService.listOverrides(app.prisma);
     return reply.send(overrides);
-  });
+    }
+  );
 
   // POST /overrides - Create override
-  app.post("/overrides", async (req, reply) => {
-    const body = OverrideCreateSchema.parse(req.body);
+  zApp.post(
+    "/overrides",
+    {
+      schema: {
+        tags: ["Overrides"],
+        body: OverrideCreateSchema,
+      },
+    },
+    async (req, reply) => {
+    const body = req.body;
     const data: {
       date: string;
       openTime?: string;
@@ -30,12 +49,22 @@ export const overridesRoutes: FastifyPluginAsync = async (app) => {
     
     const override = await overrideService.createOverride(app.prisma, data);
     return reply.status(201).send(override);
-  });
+    }
+  );
 
   // PUT /overrides/:id - Update override
-  app.put("/overrides/:id", async (req, reply) => {
-    const params = OverrideParamsSchema.parse(req.params);
-    const body = OverrideUpdateSchema.parse(req.body);
+  zApp.put(
+    "/overrides/:id",
+    {
+      schema: {
+        tags: ["Overrides"],
+        params: OverrideParamsSchema,
+        body: OverrideUpdateSchema,
+      },
+    },
+    async (req, reply) => {
+    const params = req.params;
+    const body = req.body;
     const data: {
       openTime?: string;
       closeTime?: string;
@@ -47,12 +76,21 @@ export const overridesRoutes: FastifyPluginAsync = async (app) => {
     
     const override = await overrideService.updateOverride(app.prisma, params.id, data);
     return reply.send(override);
-  });
+    }
+  );
 
   // DELETE /overrides/:id - Delete override
-  app.delete("/overrides/:id", async (req, reply) => {
-    const params = OverrideParamsSchema.parse(req.params);
-    await overrideService.deleteOverride(app.prisma, params.id);
+  zApp.delete(
+    "/overrides/:id",
+    {
+      schema: {
+        tags: ["Overrides"],
+        params: OverrideParamsSchema,
+      },
+    },
+    async (req, reply) => {
+    await overrideService.deleteOverride(app.prisma, req.params.id);
     return reply.status(204).send();
-  });
+    }
+  );
 };
