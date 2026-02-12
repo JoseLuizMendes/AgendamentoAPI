@@ -33,9 +33,12 @@ const swaggerPlugin: FastifyPluginAsync = async (app) => {
     },
   });
 
-  // Expõe o OpenAPI JSON
-  app.get("/documentation/json", async () => {
-    return app.swagger();
+  app.get("/", async (_req, reply) => {
+    return reply.redirect("/documentation");
+  });
+
+  app.get("/docs", async (_req, reply) => {
+    return reply.redirect("/documentation");
   });
 };
 
