@@ -9,20 +9,30 @@ const swaggerPlugin: FastifyPluginAsync = async (app) => {
     openapi: {
       openapi: "3.1.0",
       info: {
-        title: "Agendamento API",
-        version: "1.0.0",
-        description: "API para gerenciamento de agendamentos",
+        title: "Agendamento API - Multi-Tenant",
+        version: "2.0.0",
+        description: "API multi-tenant para gerenciamento de agendamentos com autenticação JWT",
       },
       components: {
         securitySchemes: {
-          apiKey: {
+          bearerAuth: {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT",
+            description: "JWT token obtido via /auth/login ou /auth/signup",
+          },
+          cookieAuth: {
             type: "apiKey",
-            name: "x-api-key",
-            in: "header",
+            in: "cookie",
+            name: "token",
+            description: "JWT token armazenado em cookie httpOnly",
           },
         },
       },
-      security: [{ apiKey: [] }],
+      security: [
+        { bearerAuth: [] },
+        { cookieAuth: [] },
+      ],
     },
     transform: jsonSchemaTransform,
   });
