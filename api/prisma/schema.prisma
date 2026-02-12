@@ -12,10 +12,40 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  OWNER
+  STAFF
+  CUSTOMER
+}
+
+model Tenant {
+  id                     Int                     @id @default(autoincrement())
+  name                   String
+  slug                   String                  @unique
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  users                  User[]
+  services               Service[]
+  appointments           Appointment[]
+  businessHours          BusinessHours[]
+  businessDateOverrides  BusinessDateOverride[]
+}
+
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id           Int           @id @default(autoincrement())
+  email        String
+  name         String?
+  passwordHash String
+  role         Role          @default(CUSTOMER)
+  tenantId     Int
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([email, tenantId])
+  @@index([tenantId])
+  @@index([email])
 }
 
 model Service {
@@ -23,9 +53,13 @@ model Service {
   name              String
   priceInCents      Int
   durationInMinutes Int
+  tenantId          Int
+  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   appointments      Appointment[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+
+  @@index([tenantId])
 }
 
 enum AppointmentStatus {
@@ -39,6 +73,10 @@ model Appointment {
   customerPhone String
   serviceId     Int
   service       Service           @relation(fields: [serviceId], references: [id])
+  userId        Int?
+  user          User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenantId      Int
+  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   startTime     DateTime
   endTime       DateTime
   status        AppointmentStatus @default(SCHEDULED)
@@ -46,17 +84,24 @@ model Appointment {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
+  @@index([tenantId, serviceId])
+  @@index([tenantId, startTime, endTime])
+  @@index([tenantId, userId])
   @@index([serviceId])
-  @@index([startTime, endTime])
 }
 
 model BusinessHours {
-  id        Int            @id @default(autoincrement())
-  dayOfWeek Int            @unique
+  id        Int             @id @default(autoincrement())
+  dayOfWeek Int
   openTime  String
   closeTime String
-  isOff     Boolean        @default(false)
+  isOff     Boolean         @default(false)
+  tenantId  Int
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   breaks    BusinessBreak[]
+
+  @@unique([tenantId, dayOfWeek])
+  @@index([tenantId])
 }
 
 model BusinessBreak {
@@ -71,10 +116,15 @@ model BusinessBreak {
 
 model BusinessDateOverride {
   id        Int      @id @default(autoincrement())
-  date      String   @unique // YYYY-MM-DD
+  date      String   // YYYY-MM-DD
   openTime  String?
   closeTime String?
   isOff     Boolean  @default(false)
+  tenantId  Int
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, date])
+  @@index([tenantId])
 }

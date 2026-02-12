@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+// Auth schemas
+export const SignupSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
+  name: z.string().optional(),
+  tenantName: z.string().min(1, "Nome do tenant é obrigatório"),
+  tenantSlug: z.string().min(1, "Slug do tenant é obrigatório").regex(/^[a-z0-9-]+$/, "Slug deve conter apenas letras minúsculas, números e hífens"),
+});
+
+export const LoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+  tenantSlug: z.string().min(1),
+});
+
 // User schemas
 export const UserCreateSchema = z.object({
   email: z.string().email(),
@@ -95,6 +110,8 @@ export const ErrorResponseSchema = z.object({
   message: z.string(),
 });
 
+export type SignupInput = z.infer<typeof SignupSchema>;
+export type LoginInput = z.infer<typeof LoginSchema>;
 export type UserCreate = z.infer<typeof UserCreateSchema>;
 export type UserUpdate = z.infer<typeof UserUpdateSchema>;
 export type ServiceCreate = z.infer<typeof ServiceCreateSchema>;

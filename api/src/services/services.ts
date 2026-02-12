@@ -1,18 +1,19 @@
 import type { PrismaClient } from "@prisma/client";
 import { NotFoundError } from "../utils/errors.js";
 
-export async function listServices(prisma: PrismaClient) {
+export async function listServices(prisma: PrismaClient, tenantId: number) {
   return prisma.service.findMany({
+    where: { tenantId },
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function getService(prisma: PrismaClient, id: number) {
+export async function getService(prisma: PrismaClient, id: number, tenantId: number) {
   const service = await prisma.service.findUnique({
     where: { id },
   });
 
-  if (!service) {
+  if (!service || service.tenantId !== tenantId) {
     throw new NotFoundError("Serviço não encontrado");
   }
 
@@ -21,6 +22,7 @@ export async function getService(prisma: PrismaClient, id: number) {
 
 export async function createService(
   prisma: PrismaClient,
+  tenantId: number,
   data: {
     name: string;
     priceInCents: number;
@@ -28,19 +30,26 @@ export async function createService(
   }
 ) {
   return prisma.service.create({
-    data,
+    data: {
+      ...data,
+      tenantId,
+    },
   });
 }
 
 export async function updateService(
   prisma: PrismaClient,
   id: number,
+  tenantId: number,
   data: {
     name?: string;
     priceInCents?: number;
     durationInMinutes?: number;
   }
 ) {
+  // First check if service exists and belongs to tenant
+  await getService(prisma, id, tenantId);
+
   try {
     return await prisma.service.update({
       where: { id },
@@ -54,7 +63,10 @@ export async function updateService(
   }
 }
 
-export async function deleteService(prisma: PrismaClient, id: number) {
+export async function deleteService(prisma: PrismaClient, id: number, tenantId: number) {
+  // First check if service exists and belongs to tenant
+  await getService(prisma, id, tenantId);
+
   try {
     await prisma.service.delete({
       where: { id },

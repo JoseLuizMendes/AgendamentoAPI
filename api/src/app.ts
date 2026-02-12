@@ -8,6 +8,7 @@ import swaggerPlugin from "./plugins/docs/swagger.js";
 import authPlugin from "./plugins/auth.js";
 import { AppError } from "./utils/errors.js";
 import { healthRoutes } from "./routes/health.js";
+import { authRoutes } from "./routes/auth.js";
 import { usersRoutes } from "./routes/users.js";
 import { servicesRoutes } from "./routes/services.js";
 import { hoursRoutes } from "./routes/hours.js";
@@ -110,6 +111,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(authPlugin);
 
   await app.register(healthRoutes);
+  await app.register(authRoutes);
   await app.register(usersRoutes);
   await app.register(servicesRoutes);
   await app.register(hoursRoutes);
