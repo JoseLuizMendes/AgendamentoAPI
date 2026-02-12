@@ -1,5 +1,12 @@
 {
   "version": 2,
   "buildCommand": "pnpm vercel-build",
-  "framework": null
+  "framework": null,
+  "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
 }
