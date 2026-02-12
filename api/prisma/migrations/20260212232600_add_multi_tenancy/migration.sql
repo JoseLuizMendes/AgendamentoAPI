@@ -28,7 +28,7 @@ SELECT 'Default Tenant', 'default-tenant', CURRENT_TIMESTAMP
 WHERE NOT EXISTS (SELECT 1 FROM "Tenant" WHERE "slug" = 'default-tenant');
 
 UPDATE "User" 
-SET "tenantId" = (SELECT "id" FROM "Tenant" WHERE "slug" = 'default-tenant" LIMIT 1),
+SET "tenantId" = (SELECT "id" FROM "Tenant" WHERE "slug" = 'default-tenant' LIMIT 1),
     "passwordHash" = '$2a$10$defaulthashforexistingusers',
     "role" = 'OWNER'
 WHERE "tenantId" IS NULL;
