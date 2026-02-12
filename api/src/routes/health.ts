@@ -1,11 +1,24 @@
 import type { FastifyPluginAsync } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 export const healthRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/health/live", async () => {
+  const zApp = app.withTypeProvider<ZodTypeProvider>();
+  zApp.get("/health/live", 
+    {
+      schema:{
+        tags:["Raiz"]
+      }
+    }, async () => {
     return { status: "ok" };
   });
 
-  app.get("/health/ready", async () => {
+  zApp.get("/health/ready",
+    {
+      schema:{
+        tags:["Raiz"]
+      }
+    },
+     async () => {
     try {
       await app.prisma.$queryRaw`SELECT 1`;
       return { status: "ok", database: "connected" };
@@ -14,3 +27,4 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 };
+

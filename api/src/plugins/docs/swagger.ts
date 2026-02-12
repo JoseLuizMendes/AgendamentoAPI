@@ -34,14 +34,6 @@ const swaggerPlugin: FastifyPluginAsync = async (app) => {
       deepLinking: true,
     },
   });
-
-  app.get("/", async (_req, reply) => {
-    return reply.redirect("/documentation");
-  });
-
-  app.get("/docs", async (_req, reply) => {
-    return reply.redirect("/documentation");
-  });
 };
 
 export default fp(swaggerPlugin, {
