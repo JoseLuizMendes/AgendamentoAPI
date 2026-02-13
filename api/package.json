@@ -18,7 +18,14 @@
     "test:unit": "vitest run tests/unit",
     "test:integration:prepare": "tsx tests/scripts/prepare-integration-db.ts",
     "test:integration": "pnpm test:integration:prepare && pnpm prisma:generate && pnpm prisma:deploy && vitest run tests/integration",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset",
+    "db:setup": "pnpm db:generate && pnpm db:push"
   },
   "keywords": [],
   "author": "",
