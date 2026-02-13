@@ -25,12 +25,12 @@ export async function buildApp(): Promise<FastifyInstance> {
   app.setSerializerCompiler(serializerCompiler);
 
   app.setErrorHandler((err, req, reply) => {
-    // Erro comum em ambiente local: DB não configurado
-    if (err instanceof Error) {
-      const isProd = (process.env["NODE_ENV"] ?? "development") === "production";
-      if (!isProd && err.message.includes("DATABASE_URL não está definido")) {
-        return reply.status(500).send({ message: err.message });
-      }
+    // DB não configurado (comum em deploy/ambiente sem env vars)
+    if (err instanceof Error && err.message.includes("DATABASE_URL não está definido")) {
+      return reply.status(500).send({
+        message:
+          "Banco de dados não configurado (DATABASE_URL ausente). Configure DATABASE_URL e execute as migrations (prisma migrate deploy).",
+      });
     }
 
     // Handle custom app errors
@@ -65,6 +65,12 @@ export async function buildApp(): Promise<FastifyInstance> {
       }
       if (err.code === "P2025") {
         return reply.status(404).send({ message: "Registro não encontrado" });
+      }
+      // Tabelas/colunas inexistentes (schema não aplicado)
+      if (err.code === "P2021" || err.code === "P2022") {
+        return reply
+          .status(500)
+          .send({ message: "Banco de dados não está pronto (migrations pendentes ou schema divergente)." });
       }
       req.log.error({ err }, "Prisma error");
       return reply.status(500).send({ message: "Internal Server Error" });

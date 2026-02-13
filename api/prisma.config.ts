@@ -9,6 +9,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Para Migrate/Deploy, algumas plataformas expõem uma URL "direta" (sem pool/pgbouncer).
+    // Se existir, prioriza ela; caso contrário usa DATABASE_URL.
+    url: process.env["DIRECT_DATABASE_URL"] ?? process.env["DATABASE_URL"],
   },
 });

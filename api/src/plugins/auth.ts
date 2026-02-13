@@ -69,7 +69,9 @@ const authPlugin: FastifyPluginAsync = async (app) => {
         return reply.status(401).send({ message: "Token não fornecido" });
       }
 
-      const decoded = await request.jwtVerify<JWTPayload>();
+      // Valida o token extraído (cookie ou Authorization: Bearer ...)
+      // `request.jwtVerify()` não aceita passar token diretamente nas typings atuais.
+      const decoded = app.jwt.verify<JWTPayload>(token);
       request.auth = decoded;
     } catch (err) {
       return reply.status(401).send({ message: "Token inválido ou expirado" });
@@ -99,6 +101,9 @@ const authPlugin: FastifyPluginAsync = async (app) => {
 
     // For protected routes, authenticate
     await app.authenticate(req, reply);
+    if (reply.sent) {
+      return;
+    }
   });
 };
 
