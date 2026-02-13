@@ -1,8 +1,9 @@
 import type { PrismaClient } from "@prisma/client";
 import { NotFoundError } from "../utils/errors.js";
 
-export async function listBusinessHours(prisma: PrismaClient) {
+export async function listBusinessHours(prisma: PrismaClient, tenantId: number) {
   return prisma.businessHours.findMany({
+    where: { tenantId },
     include: {
       breaks: true,
     },
@@ -10,7 +11,7 @@ export async function listBusinessHours(prisma: PrismaClient) {
   });
 }
 
-export async function getBusinessHours(prisma: PrismaClient, id: number) {
+export async function getBusinessHours(prisma: PrismaClient, id: number, tenantId: number) {
   const hours = await prisma.businessHours.findUnique({
     where: { id },
     include: {
@@ -18,7 +19,7 @@ export async function getBusinessHours(prisma: PrismaClient, id: number) {
     },
   });
 
-  if (!hours) {
+  if (!hours || hours.tenantId !== tenantId) {
     throw new NotFoundError("Horário de funcionamento não encontrado");
   }
 
@@ -27,6 +28,7 @@ export async function getBusinessHours(prisma: PrismaClient, id: number) {
 
 export async function createBusinessHours(
   prisma: PrismaClient,
+  tenantId: number,
   data: {
     dayOfWeek: number;
     openTime: string;
@@ -40,6 +42,7 @@ export async function createBusinessHours(
       openTime: data.openTime,
       closeTime: data.closeTime,
       isOff: data.isOff ?? false,
+      tenantId,
     },
   });
 }
@@ -47,12 +50,16 @@ export async function createBusinessHours(
 export async function updateBusinessHours(
   prisma: PrismaClient,
   id: number,
+  tenantId: number,
   data: {
     openTime?: string;
     closeTime?: string;
     isOff?: boolean;
   }
 ) {
+  // First check if hours exists and belongs to tenant
+  await getBusinessHours(prisma, id, tenantId);
+
   try {
     return await prisma.businessHours.update({
       where: { id },
@@ -66,7 +73,10 @@ export async function updateBusinessHours(
   }
 }
 
-export async function deleteBusinessHours(prisma: PrismaClient, id: number) {
+export async function deleteBusinessHours(prisma: PrismaClient, id: number, tenantId: number) {
+  // First check if hours exists and belongs to tenant
+  await getBusinessHours(prisma, id, tenantId);
+
   try {
     await prisma.businessHours.delete({
       where: { id },

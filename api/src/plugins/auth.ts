@@ -1,19 +1,30 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
 import fp from "fastify-plugin";
-import crypto from "node:crypto";
+import fastifyJwt from "@fastify/jwt";
+import fastifyCookie from "@fastify/cookie";
+import type { Role } from "@prisma/client";
 
-function safeEqual(a: string, b: string): boolean {
-  const aBuf = Buffer.from(a);
-  const bBuf = Buffer.from(b);
+export interface JWTPayload {
+  userId: number;
+  tenantId: number;
+  role: Role;
+}
 
-  if (aBuf.length !== bBuf.length) {
-    // compara com um buffer de mesmo tamanho para reduzir diferenças de tempo
-    const padded = Buffer.alloc(aBuf.length, 0);
-    crypto.timingSafeEqual(aBuf, padded);
-    return false;
+declare module "fastify" {
+  interface FastifyInstance {
+    authenticate(request: FastifyRequest, reply: FastifyReply): Promise<void>;
   }
+  
+  interface FastifyRequest {
+    auth?: JWTPayload;
+  }
+}
 
-  return crypto.timingSafeEqual(aBuf, bBuf);
+declare module "@fastify/jwt" {
+  interface FastifyJWT {
+    payload: JWTPayload;
+    user: JWTPayload;
+  }
 }
 
 function getRequestPath(url: string | undefined): string {
@@ -25,74 +36,69 @@ function getRequestPath(url: string | undefined): string {
   }
 }
 
-function extractApiKey(headers: Record<string, unknown>): string | null {
-  const xApiKey = headers["x-api-key"];
-  if (typeof xApiKey === "string" && xApiKey.length > 0) {
-    return xApiKey;
-  }
-
-  const auth = headers["authorization"];
-  if (typeof auth === "string") {
-    const prefix = "Bearer ";
-    if (auth.startsWith(prefix) && auth.length > prefix.length) {
-      return auth.slice(prefix.length);
-    }
-  }
-
-  return null;
-}
-
 const authPlugin: FastifyPluginAsync = async (app) => {
-  const enforce = (process.env["API_KEY_ENFORCE"] ?? (process.env["NODE_ENV"] === "production" ? "true" : "false")) === "true";
-  const apiKey = process.env["API_KEY"];
+  const jwtSecret = process.env["JWT_SECRET"] ?? "development-secret-change-in-production";
   const publicHealth = process.env["PUBLIC_HEALTH"] ?? "true";
 
-  if (enforce && (!apiKey || apiKey.length < 16)) {
-    app.log.error(
-      { enforce, hasApiKey: Boolean(apiKey), apiKeyLength: apiKey?.length ?? 0 },
-      "API_KEY_ENFORCE=true mas API_KEY ausente/curta; negando requests (exceto health público)"
-    );
+  // Register JWT
+  await app.register(fastifyJwt, {
+    secret: jwtSecret,
+    cookie: {
+      cookieName: "token",
+      signed: false,
+    },
+  });
 
-    app.addHook("onRequest", async (req, reply) => {
-      const path = getRequestPath(req.url);
-      const isHealth = path === "/health/live" || path === "/health/ready";
-      if (publicHealth === "true" && isHealth) {
-        return;
+  // Register Cookie support
+  await app.register(fastifyCookie);
+
+  // Authentication decorator
+  app.decorate("authenticate", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      // Try to get token from cookie first, then from Authorization header
+      let token = request.cookies.token;
+      
+      if (!token) {
+        const authHeader = request.headers.authorization;
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+          token = authHeader.substring(7);
+        }
       }
 
-      return reply.status(500).send({ message: "Internal Server Error" });
-    });
+      if (!token) {
+        return reply.status(401).send({ message: "Token não fornecido" });
+      }
 
-    return;
-  }
+      const decoded = await request.jwtVerify<JWTPayload>();
+      request.auth = decoded;
+    } catch (err) {
+      return reply.status(401).send({ message: "Token inválido ou expirado" });
+    }
+  });
+
+  // Public routes that don't require authentication
+  const publicRoutes = [
+    "/health/live",
+    "/health/ready",
+    "/",
+    "/docs",
+    "/documentation",
+    "/auth/signup",
+    "/auth/login",
+  ];
 
   app.addHook("onRequest", async (req, reply) => {
-    if (!enforce) {
-      return;
-    }
-
     const path = getRequestPath(req.url);
 
-    // Rotas públicas
-    const isHealth = path === "/health/live" || path === "/health/ready";
-    const isDocs =
-      path === "/" ||
-      path === "/docs" ||
-      path === "/documentation" ||
-      path.startsWith("/documentation/");
+    // Check if route is public
+    const isPublic = publicRoutes.some(route => path === route || path.startsWith(route + "/"));
     
-    if (isDocs) {
-      return;
-    }
-    
-    if (publicHealth === "true" && isHealth) {
+    if (isPublic) {
       return;
     }
 
-    const presented = extractApiKey(req.headers as unknown as Record<string, unknown>);
-    if (!presented || !apiKey || !safeEqual(presented, apiKey)) {
-      return reply.status(401).send({ message: "Não autorizado" });
-    }
+    // For protected routes, authenticate
+    await app.authenticate(req, reply);
   });
 };
 

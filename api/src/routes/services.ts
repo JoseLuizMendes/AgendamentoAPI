@@ -18,9 +18,12 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
         tags: ["Services"],
       },
     },
-    async (_req, reply) => {
-    const services = await serviceService.listServices(app.prisma);
-    return reply.send(services);
+    async (req, reply) => {
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+      const services = await serviceService.listServices(app.prisma, req.auth.tenantId);
+      return reply.send(services);
     }
   );
 
@@ -34,8 +37,17 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-      const service = await serviceService.createService(app.prisma, req.body);
-    return reply.status(201).send(service);
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+      
+      // Only OWNER and STAFF can create services
+      if (req.auth.role !== "OWNER" && req.auth.role !== "STAFF") {
+        return reply.status(403).send({ message: "Sem permissão para criar serviços" });
+      }
+
+      const service = await serviceService.createService(app.prisma, req.auth.tenantId, req.body);
+      return reply.status(201).send(service);
     }
   );
 
@@ -50,17 +62,26 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-    const data: {
-      name?: string;
-      priceInCents?: number;
-      durationInMinutes?: number;
-    } = {};
-    if (req.body.name !== undefined) data.name = req.body.name;
-    if (req.body.priceInCents !== undefined) data.priceInCents = req.body.priceInCents;
-    if (req.body.durationInMinutes !== undefined) data.durationInMinutes = req.body.durationInMinutes;
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+      
+      // Only OWNER can update services
+      if (req.auth.role !== "OWNER") {
+        return reply.status(403).send({ message: "Sem permissão para atualizar serviços" });
+      }
+
+      const data: {
+        name?: string;
+        priceInCents?: number;
+        durationInMinutes?: number;
+      } = {};
+      if (req.body.name !== undefined) data.name = req.body.name;
+      if (req.body.priceInCents !== undefined) data.priceInCents = req.body.priceInCents;
+      if (req.body.durationInMinutes !== undefined) data.durationInMinutes = req.body.durationInMinutes;
     
-    const service = await serviceService.updateService(app.prisma, req.params.id, data);
-    return reply.send(service);
+      const service = await serviceService.updateService(app.prisma, req.params.id, req.auth.tenantId, data);
+      return reply.send(service);
     }
   );
 
@@ -74,8 +95,17 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-      await serviceService.deleteService(app.prisma, req.params.id);
-    return reply.status(204).send();
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+      
+      // Only OWNER can delete services
+      if (req.auth.role !== "OWNER") {
+        return reply.status(403).send({ message: "Sem permissão para deletar serviços" });
+      }
+
+      await serviceService.deleteService(app.prisma, req.params.id, req.auth.tenantId);
+      return reply.status(204).send();
     }
   );
 };
