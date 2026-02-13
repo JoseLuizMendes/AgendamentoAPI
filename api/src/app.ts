@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
+import cors from "@fastify/cors";
 import prismaPlugin from "./plugins/prisma.js";
 import swaggerPlugin from "./plugins/docs/swagger.js";
 import authPlugin from "./plugins/auth.js";
@@ -95,6 +96,25 @@ export async function buildApp(): Promise<FastifyInstance> {
         imgSrc: ["'self'", "data:", "https:"],
       },
     },
+  });
+
+  await app.register(cors, {
+    origin: (origin, cb) => {
+      const allowed = (process.env["CORS_ORIGIN"] ?? "http://localhost:3001")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (!origin) {
+        cb(null, true);
+        return;
+      }
+
+      cb(null, allowed.includes(origin));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Authorization", "Content-Type"],
   });
 
   await app.register(rateLimit, {
