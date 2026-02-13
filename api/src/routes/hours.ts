@@ -18,9 +18,12 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
         tags: ["BusinessHours"],
       },
     },
-    async (_req, reply) => {
-    const hours = await hoursService.listBusinessHours(app.prisma);
-    return reply.send(hours);
+    async (req, reply) => {
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+      const hours = await hoursService.listBusinessHours(app.prisma, req.auth.tenantId);
+      return reply.send(hours);
     }
   );
 
@@ -34,21 +37,30 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-    const body = req.body;
-    const data: {
-      dayOfWeek: number;
-      openTime: string;
-      closeTime: string;
-      isOff?: boolean;
-    } = {
-      dayOfWeek: body.dayOfWeek,
-      openTime: body.openTime,
-      closeTime: body.closeTime,
-    };
-    if (body.isOff !== undefined) data.isOff = body.isOff;
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+      
+      // Only OWNER can create business hours
+      if (req.auth.role !== "OWNER") {
+        return reply.status(403).send({ message: "Sem permissão para criar horários de funcionamento" });
+      }
+
+      const body = req.body;
+      const data: {
+        dayOfWeek: number;
+        openTime: string;
+        closeTime: string;
+        isOff?: boolean;
+      } = {
+        dayOfWeek: body.dayOfWeek,
+        openTime: body.openTime,
+        closeTime: body.closeTime,
+      };
+      if (body.isOff !== undefined) data.isOff = body.isOff;
     
-    const hours = await hoursService.createBusinessHours(app.prisma, data);
-    return reply.status(201).send(hours);
+      const hours = await hoursService.createBusinessHours(app.prisma, req.auth.tenantId, data);
+      return reply.status(201).send(hours);
     }
   );
 
@@ -63,19 +75,28 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-    const params = req.params;
-    const body = req.body;
-    const data: {
-      openTime?: string;
-      closeTime?: string;
-      isOff?: boolean;
-    } = {};
-    if (body.openTime !== undefined) data.openTime = body.openTime;
-    if (body.closeTime !== undefined) data.closeTime = body.closeTime;
-    if (body.isOff !== undefined) data.isOff = body.isOff;
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+      
+      // Only OWNER can update business hours
+      if (req.auth.role !== "OWNER") {
+        return reply.status(403).send({ message: "Sem permissão para atualizar horários de funcionamento" });
+      }
+
+      const params = req.params;
+      const body = req.body;
+      const data: {
+        openTime?: string;
+        closeTime?: string;
+        isOff?: boolean;
+      } = {};
+      if (body.openTime !== undefined) data.openTime = body.openTime;
+      if (body.closeTime !== undefined) data.closeTime = body.closeTime;
+      if (body.isOff !== undefined) data.isOff = body.isOff;
     
-    const hours = await hoursService.updateBusinessHours(app.prisma, params.id, data);
-    return reply.send(hours);
+      const hours = await hoursService.updateBusinessHours(app.prisma, params.id, req.auth.tenantId, data);
+      return reply.send(hours);
     }
   );
 
@@ -89,8 +110,17 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-    await hoursService.deleteBusinessHours(app.prisma, req.params.id);
-    return reply.status(204).send();
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+      
+      // Only OWNER can delete business hours
+      if (req.auth.role !== "OWNER") {
+        return reply.status(403).send({ message: "Sem permissão para deletar horários de funcionamento" });
+      }
+
+      await hoursService.deleteBusinessHours(app.prisma, req.params.id, req.auth.tenantId);
+      return reply.status(204).send();
     }
   );
 };

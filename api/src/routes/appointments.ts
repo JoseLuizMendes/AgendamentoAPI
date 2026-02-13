@@ -21,13 +21,23 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-    const query = req.query;
-    const filters: { serviceId?: number; status?: string } = {};
-    if (query.serviceId !== undefined) filters.serviceId = query.serviceId;
-    if (query.status !== undefined) filters.status = query.status;
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+
+      const query = req.query;
+      const filters: { serviceId?: number; status?: string } = {};
+      if (query.serviceId !== undefined) filters.serviceId = query.serviceId;
+      if (query.status !== undefined) filters.status = query.status;
     
-    const appointments = await appointmentService.listAppointments(app.prisma, filters);
-    return reply.send(appointments);
+      const appointments = await appointmentService.listAppointments(
+        app.prisma,
+        req.auth.tenantId,
+        req.auth.userId,
+        req.auth.role,
+        filters
+      );
+      return reply.send(appointments);
     }
   );
 
@@ -41,8 +51,18 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-    const appointment = await appointmentService.getAppointment(app.prisma, req.params.id);
-    return reply.send(appointment);
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+
+      const appointment = await appointmentService.getAppointment(
+        app.prisma,
+        req.params.id,
+        req.auth.tenantId,
+        req.auth.userId,
+        req.auth.role
+      );
+      return reply.send(appointment);
     }
   );
 
@@ -56,14 +76,23 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-    const body = req.body;
-    const appointment = await appointmentService.createAppointment(app.prisma, {
-      customerName: body.customerName,
-      customerPhone: body.customerPhone,
-      serviceId: body.serviceId,
-      startTime: new Date(body.startTime),
-    });
-    return reply.status(201).send(appointment);
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+
+      const body = req.body;
+      const appointment = await appointmentService.createAppointment(
+        app.prisma,
+        req.auth.tenantId,
+        req.auth.userId,
+        {
+          customerName: body.customerName,
+          customerPhone: body.customerPhone,
+          serviceId: body.serviceId,
+          startTime: new Date(body.startTime),
+        }
+      );
+      return reply.status(201).send(appointment);
     }
   );
 
@@ -78,19 +107,26 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-    const params = req.params;
-    const body = req.body;
-    
-    const updateData: any = {};
-    if (body.status) updateData.status = body.status;
-    if (body.startTime) updateData.startTime = new Date(body.startTime);
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
 
-    const appointment = await appointmentService.updateAppointment(
-      app.prisma,
-      params.id,
-      updateData
-    );
-    return reply.send(appointment);
+      const params = req.params;
+      const body = req.body;
+    
+      const updateData: any = {};
+      if (body.status) updateData.status = body.status;
+      if (body.startTime) updateData.startTime = new Date(body.startTime);
+
+      const appointment = await appointmentService.updateAppointment(
+        app.prisma,
+        params.id,
+        req.auth.tenantId,
+        req.auth.userId,
+        req.auth.role,
+        updateData
+      );
+      return reply.send(appointment);
     }
   );
 
@@ -104,8 +140,18 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-    await appointmentService.deleteAppointment(app.prisma, req.params.id);
-    return reply.status(204).send();
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+
+      await appointmentService.deleteAppointment(
+        app.prisma,
+        req.params.id,
+        req.auth.tenantId,
+        req.auth.userId,
+        req.auth.role
+      );
+      return reply.status(204).send();
     }
   );
 };

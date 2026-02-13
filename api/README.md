@@ -1,6 +1,20 @@
 # Agendamento API
 
-API REST para gerenciamento de agendamentos construída com Fastify v5 + Prisma + PostgreSQL.
+API REST multi-tenant para gerenciamento de agendamentos construída com Fastify v5 + Prisma + PostgreSQL.
+
+## 🎯 Features
+
+- ✅ **Multi-Tenancy**: Row-level tenant isolation
+- ✅ **JWT Authentication**: Secure token-based auth with httpOnly cookies
+- ✅ **Role-Based Access Control**: OWNER, STAFF, CUSTOMER roles
+- ✅ **Appointment Management**: Create, update, cancel appointments
+- ✅ **Service Management**: Define services with pricing and duration
+- ✅ **Business Hours**: Configure operating hours per day
+- ✅ **Date Overrides**: Handle holidays and special dates
+- ✅ **OpenAPI/Swagger**: Auto-generated API documentation
+- ✅ **Type Safety**: Full TypeScript + Zod validation
+
+📖 **[Multi-Tenancy Guide](MULTI_TENANCY.md)** - Complete documentation on authentication, roles, and tenant isolation.
 
 ## 🚀 Deploy na Vercel
 
@@ -20,12 +34,11 @@ API REST para gerenciamento de agendamentos construída com Fastify v5 + Prisma 
 # Database (obrigatório)
 DATABASE_URL=postgresql://user:password@host:5432/database
 
-# API Key (obrigatório em produção)
-API_KEY=seu-token-seguro-minimo-16-chars
+# JWT Secret (obrigatório em produção)
+JWT_SECRET=seu-jwt-secret-minimo-32-chars-para-producao
 
 # Opcional
 NODE_ENV=production
-API_KEY_ENFORCE=true
 PUBLIC_HEALTH=true
 RATE_LIMIT_MAX=120
 RATE_LIMIT_WINDOW=1 minute
@@ -33,9 +46,11 @@ RATE_LIMIT_WINDOW=1 minute
 
 ### Acesso
 
-- **Documentação**: `https://seu-app.vercel.app/docs`
-- **API**: `https://seu-app.vercel.app/services`
-  - Requer header: `x-api-key: seu-token` ou `Authorization: Bearer seu-token`
+- **Documentação**: `https://seu-app.vercel.app/documentation`
+- **Auth**: 
+  - Signup: `POST /auth/signup` (create tenant + owner)
+  - Login: `POST /auth/login` (get JWT token)
+- **API**: Use JWT token em cookie ou `Authorization: Bearer <token>` header
 - **Health check**: `https://seu-app.vercel.app/health/live` (público)
 
 ### Debug em produção
@@ -97,22 +112,52 @@ pnpm build
 
 ## 🔒 Segurança
 
+- ✅ JWT authentication (httpOnly cookies + Bearer token)
+- ✅ Multi-tenant row-level isolation
+- ✅ Role-based access control (RBAC)
 - ✅ Helmet (security headers)
 - ✅ Rate limiting (120 req/min default)
-- ✅ API key authentication
-- ✅ Validação de entrada (AJV/TypeBox)
+- ✅ Password hashing (bcrypt)
+- ✅ Validação de entrada (Zod)
 - ✅ Error handling global
 
 ## 📖 Endpoints
 
-Ver documentação completa em `/docs` após deploy.
+Ver documentação completa em `/documentation` após deploy.
 
 ### Principais recursos:
 
+**Auth (público)**
+- `POST /auth/signup` - Cria tenant e usuário owner
+- `POST /auth/login` - Login (obtém JWT)
+- `POST /auth/logout` - Logout
+- `GET /auth/me` - Info do usuário autenticado
+
+**Services (autenticado)**
 - `GET /services` - Lista serviços
-- `POST /services` - Cria serviço
-- `GET /slots` - Lista horários disponíveis
+- `POST /services` - Cria serviço (OWNER/STAFF)
+- `PUT /services/:id` - Atualiza serviço (OWNER)
+- `DELETE /services/:id` - Deleta serviço (OWNER)
+
+**Appointments (autenticado)**
+- `GET /appointments` - Lista agendamentos
 - `POST /appointments` - Cria agendamento
+- `PATCH /appointments/:id` - Atualiza agendamento
+- `DELETE /appointments/:id` - Cancela agendamento
+
+**Business Hours (OWNER apenas)**
+- `GET /hours` - Lista horários
+- `POST /hours` - Cria horários
+- `PUT /hours/:id` - Atualiza horários
+- `DELETE /hours/:id` - Deleta horários
+
+**Users (OWNER apenas)**
+- `GET /users` - Lista usuários do tenant
+- `POST /users` - Cria usuário
+- `PUT /users/:id` - Atualiza usuário
+- `DELETE /users/:id` - Deleta usuário
+
+**Health (público)**
 - `GET /health/live` - Health check
 
 ## 🏗️ Arquitetura
@@ -126,6 +171,8 @@ Seguindo Clean Architecture:
 
 ## 📝 Notas
 
-- O Swagger UI está sempre habilitado em `/docs`
-- A autenticação é obrigatória em produção (exceto `/health/*` e `/docs`)
-- Use `x-api-key` header (recomendado) ou `Authorization: Bearer`
+- O Swagger UI está sempre habilitado em `/documentation`
+- A autenticação JWT é obrigatória (exceto rotas públicas: `/health/*`, `/docs`, `/auth/*`)
+- Cada tenant tem dados completamente isolados
+- Use `Authorization: Bearer <token>` header ou cookie `token` para autenticação
+- Consulte [MULTI_TENANCY.md](MULTI_TENANCY.md) para detalhes completos

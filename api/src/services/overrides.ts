@@ -1,18 +1,19 @@
 import type { PrismaClient } from "@prisma/client";
 import { NotFoundError } from "../utils/errors.js";
 
-export async function listOverrides(prisma: PrismaClient) {
+export async function listOverrides(prisma: PrismaClient, tenantId: number) {
   return prisma.businessDateOverride.findMany({
+    where: { tenantId },
     orderBy: { date: "asc" },
   });
 }
 
-export async function getOverride(prisma: PrismaClient, id: number) {
+export async function getOverride(prisma: PrismaClient, id: number, tenantId: number) {
   const override = await prisma.businessDateOverride.findUnique({
     where: { id },
   });
 
-  if (!override) {
+  if (!override || override.tenantId !== tenantId) {
     throw new NotFoundError("Override não encontrado");
   }
 
@@ -21,6 +22,7 @@ export async function getOverride(prisma: PrismaClient, id: number) {
 
 export async function createOverride(
   prisma: PrismaClient,
+  tenantId: number,
   data: {
     date: string;
     openTime?: string;
@@ -34,6 +36,7 @@ export async function createOverride(
       ...(data.openTime !== undefined && { openTime: data.openTime }),
       ...(data.closeTime !== undefined && { closeTime: data.closeTime }),
       isOff: data.isOff ?? false,
+      tenantId,
     },
   });
 }
@@ -41,12 +44,16 @@ export async function createOverride(
 export async function updateOverride(
   prisma: PrismaClient,
   id: number,
+  tenantId: number,
   data: {
     openTime?: string;
     closeTime?: string;
     isOff?: boolean;
   }
 ) {
+  // First check if override exists and belongs to tenant
+  await getOverride(prisma, id, tenantId);
+
   try {
     return await prisma.businessDateOverride.update({
       where: { id },
@@ -60,7 +67,10 @@ export async function updateOverride(
   }
 }
 
-export async function deleteOverride(prisma: PrismaClient, id: number) {
+export async function deleteOverride(prisma: PrismaClient, id: number, tenantId: number) {
+  // First check if override exists and belongs to tenant
+  await getOverride(prisma, id, tenantId);
+
   try {
     await prisma.businessDateOverride.delete({
       where: { id },
