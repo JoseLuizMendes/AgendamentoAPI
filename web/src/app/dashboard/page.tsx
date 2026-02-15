@@ -209,7 +209,7 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-4xl p-6">
-      <div className="flex items-start justify-between gap-6">
+      <div className="flex items-start justify-between  gap-6">
         <div>
           <h1 className="text-2xl font-semibold">Dashboard de teste</h1>
           <p className="mt-1 text-sm text-zinc-600">
@@ -238,7 +238,7 @@ export default function DashboardPage() {
 
       {error ? <div className="mt-6 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div> : null}
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
+      <div className="mt-6 grid gap-6 md:grid-cols-2 ">
         <section className="rounded border p-4">
           <h2 className="text-lg font-semibold">Sessão</h2>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -312,9 +312,9 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      <section className="mt-6 rounded border p-4">
+      <section className="mt-6 rounded border p-4 ">
         <h2 className="text-lg font-semibold">Última resposta (raw)</h2>
-        <pre className="mt-3 max-h-[420px] overflow-auto rounded border bg-zinc-50 p-3 text-xs">{raw || "(vazio)"}</pre>
+        <pre className="mt-3 max-h-[420px] overflow-auto rounded border bg-black p-3 text-xs">{raw || "(vazio)"}</pre>
       </section>
     </div>
   );
