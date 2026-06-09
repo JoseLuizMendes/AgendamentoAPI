@@ -1,52 +1,8 @@
 import { Prisma, type PrismaClient, type AppointmentStatus } from "@prisma/client";
 import { NotFoundError, ConflictError, ValidationError } from "../utils/errors.js";
 import { getService } from "./services.js";
-
-/** Status que ocupam o slot (bloqueiam novos agendamentos no mesmo horário). */
-const ACTIVE_STATUSES: AppointmentStatus[] = ["SCHEDULED", "CONFIRMED"];
-
-/** Transições de status permitidas. */
-const ALLOWED_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
-  SCHEDULED: ["CONFIRMED", "COMPLETED", "NO_SHOW", "CANCELED"],
-  CONFIRMED: ["COMPLETED", "NO_SHOW", "CANCELED"],
-  COMPLETED: [],
-  NO_SHOW: [],
-  CANCELED: [],
-};
-
-type PrismaTx = Prisma.TransactionClient | PrismaClient;
-
-function buildOverlapWhere(
-  tenantId: number,
-  startTime: Date,
-  endTime: Date,
-  excludeId?: number
-): Prisma.AppointmentWhereInput {
-  return {
-    tenantId,
-    status: { in: ACTIVE_STATUSES },
-    ...(excludeId ? { id: { not: excludeId } } : {}),
-    // Sobreposição: existente.start < novo.end E existente.end > novo.start
-    startTime: { lt: endTime },
-    endTime: { gt: startTime },
-  };
-}
-
-async function assertNoConflict(
-  tx: PrismaTx,
-  tenantId: number,
-  startTime: Date,
-  endTime: Date,
-  excludeId?: number
-): Promise<void> {
-  const conflict = await tx.appointment.findFirst({
-    where: buildOverlapWhere(tenantId, startTime, endTime, excludeId),
-    select: { id: true },
-  });
-  if (conflict) {
-    throw new ConflictError("Já existe um agendamento nesse horário");
-  }
-}
+import { assertNoConflict } from "./appointment-conflict.js";
+import { assertStatusTransition } from "./appointment-status.js";
 
 export async function listAppointments(
   prisma: PrismaClient,
@@ -191,13 +147,8 @@ export async function updateAppointment(
   }
 
   // Valida transição de status
-  if (data?.status && data.status !== appointment.status) {
-    const allowed = ALLOWED_TRANSITIONS[appointment.status];
-    if (!allowed.includes(data.status)) {
-      throw new ValidationError(
-        `Transição de status inválida: ${appointment.status} -> ${data.status}`
-      );
-    }
+  if (data?.status) {
+    assertStatusTransition(appointment.status, data.status);
   }
 
   const dataFields = {

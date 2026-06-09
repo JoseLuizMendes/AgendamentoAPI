@@ -7,9 +7,7 @@ import {
   type Slot,
 } from "../utils/slots.js";
 import { zonedTimeToUtc, dayOfWeekInZone } from "../utils/time.js";
-
-/** Status considerados "ativos" (ocupam o slot). */
-export const ACTIVE_STATUSES = ["SCHEDULED", "CONFIRMED"] as const;
+import { ACTIVE_STATUSES } from "./appointment-conflict.js";
 
 /**
  * Calcula os horários disponíveis para um serviço em uma data (YYYY-MM-DD),
@@ -46,7 +44,7 @@ export async function getAvailableSlots(
   const appointments = await prisma.appointment.findMany({
     where: {
       tenantId,
-      status: { in: [...ACTIVE_STATUSES] },
+      status: { in: ACTIVE_STATUSES },
       startTime: { lt: dayEndUtc },
       endTime: { gt: dayStartUtc },
     },
