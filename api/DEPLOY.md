@@ -18,10 +18,21 @@ VPS (Ubuntu + Docker):
 ## 1. Pré-requisitos (uma vez)
 
 ### 1.1 Neon
-- Crie a branch `test` no projeto Neon.
-- Anote, de **produção** e de **test**:
+- **Produção** (obrigatório): anote, da branch principal —
   - `DATABASE_URL` (connection string — pode ser a *pooled*)
   - `DIRECT_DATABASE_URL` (a *Direct connection*, sem pooler — usada nas migrations)
+  - Essas vão no **`.env` da VPS** (passo 1.4).
+- **Branch `test`** (opcional): **não é usada pela CI** — a CI sobe um Postgres descartável
+  no próprio runner. A branch `test` serve apenas se você quiser rodar os testes/manuais
+  contra um Neon real:
+  ```bash
+  DATABASE_URL="<pooled da branch test>?schema=public" \
+    DIRECT_DATABASE_URL="<direct da branch test>" \
+    JWT_SECRET="qualquer-coisa-com-32-mais-caracteres" \
+    pnpm test:integration
+  ```
+  > ⚠️ Os testes apagam todas as tabelas (`deleteMany`) — aponte **só** para a branch `test`,
+  > nunca para produção.
 
 ### 1.2 VPS (ex.: Hetzner, DigitalOcean, Contabo — Ubuntu 22.04+)
 ```bash
