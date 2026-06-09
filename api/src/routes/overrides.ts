@@ -6,6 +6,7 @@ import {
   OverrideParamsSchema,
 } from "../schemas/index.js";
 import * as overrideService from "../services/overrides.js";
+import { requireAuth, requireRole } from "../utils/guards.js";
 
 export const overridesRoutes: FastifyPluginAsync = async (app) => {
   const zApp = app.withTypeProvider<ZodTypeProvider>();
@@ -19,33 +20,24 @@ export const overridesRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      const overrides = await overrideService.listOverrides(app.prisma, req.auth.tenantId);
+      const auth = requireAuth(req);
+      const overrides = await overrideService.listOverrides(app.prisma, auth.tenantId);
       return reply.send(overrides);
     }
   );
 
-  // POST /overrides - Create override
+  // POST /overrides - Create override (OWNER)
   zApp.post(
     "/overrides",
     {
+      preHandler: requireRole("OWNER"),
       schema: {
         tags: ["Overrides"],
         body: OverrideCreateSchema,
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      
-      // Only OWNER can create overrides
-      if (req.auth.role !== "OWNER") {
-        return reply.status(403).send({ message: "Sem permissão para criar overrides" });
-      }
-
+      const auth = requireAuth(req);
       const body = req.body;
       const data: {
         date: string;
@@ -58,16 +50,17 @@ export const overridesRoutes: FastifyPluginAsync = async (app) => {
       if (body.openTime !== undefined) data.openTime = body.openTime;
       if (body.closeTime !== undefined) data.closeTime = body.closeTime;
       if (body.isOff !== undefined) data.isOff = body.isOff;
-    
-      const override = await overrideService.createOverride(app.prisma, req.auth.tenantId, data);
+
+      const override = await overrideService.createOverride(app.prisma, auth.tenantId, data);
       return reply.status(201).send(override);
     }
   );
 
-  // PUT /overrides/:id - Update override
+  // PUT /overrides/:id - Update override (OWNER)
   zApp.put(
     "/overrides/:id",
     {
+      preHandler: requireRole("OWNER"),
       schema: {
         tags: ["Overrides"],
         params: OverrideParamsSchema,
@@ -75,15 +68,7 @@ export const overridesRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      
-      // Only OWNER can update overrides
-      if (req.auth.role !== "OWNER") {
-        return reply.status(403).send({ message: "Sem permissão para atualizar overrides" });
-      }
-
+      const auth = requireAuth(req);
       const params = req.params;
       const body = req.body;
       const data: {
@@ -94,32 +79,25 @@ export const overridesRoutes: FastifyPluginAsync = async (app) => {
       if (body.openTime !== undefined) data.openTime = body.openTime;
       if (body.closeTime !== undefined) data.closeTime = body.closeTime;
       if (body.isOff !== undefined) data.isOff = body.isOff;
-    
-      const override = await overrideService.updateOverride(app.prisma, params.id, req.auth.tenantId, data);
+
+      const override = await overrideService.updateOverride(app.prisma, params.id, auth.tenantId, data);
       return reply.send(override);
     }
   );
 
-  // DELETE /overrides/:id - Delete override
+  // DELETE /overrides/:id - Delete override (OWNER)
   zApp.delete(
     "/overrides/:id",
     {
+      preHandler: requireRole("OWNER"),
       schema: {
         tags: ["Overrides"],
         params: OverrideParamsSchema,
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      
-      // Only OWNER can delete overrides
-      if (req.auth.role !== "OWNER") {
-        return reply.status(403).send({ message: "Sem permissão para deletar overrides" });
-      }
-
-      await overrideService.deleteOverride(app.prisma, req.params.id, req.auth.tenantId);
+      const auth = requireAuth(req);
+      await overrideService.deleteOverride(app.prisma, req.params.id, auth.tenantId);
       return reply.status(204).send();
     }
   );

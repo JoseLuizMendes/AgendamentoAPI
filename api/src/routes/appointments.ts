@@ -6,9 +6,14 @@ import {
   AppointmentParamsSchema,
   AppointmentQuerySchema,
   AvailabilityQuerySchema,
+  AppointmentResponseSchema,
+  AppointmentListResponseSchema,
+  SlotResponseSchema,
+  ErrorResponseSchema,
 } from "../schemas/index.js";
 import * as appointmentService from "../services/appointments.js";
 import { getAvailableSlots } from "../services/availability.js";
+import { requireAuth } from "../utils/guards.js";
 
 export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
   const zApp = app.withTypeProvider<ZodTypeProvider>();
@@ -21,15 +26,14 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
         tags: ["Appointments"],
         querystring: AvailabilityQuerySchema,
         description: "Lista horários disponíveis para um serviço numa data (YYYY-MM-DD)",
+        response: { 200: SlotResponseSchema },
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
+      const auth = requireAuth(req);
       const slots = await getAvailableSlots(
         app.prisma,
-        req.auth.tenantId,
+        auth.tenantId,
         req.query.serviceId,
         req.query.date
       );
@@ -44,12 +48,11 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       schema: {
         tags: ["Appointments"],
         querystring: AppointmentQuerySchema,
+        response: { 200: AppointmentListResponseSchema },
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
+      const auth = requireAuth(req);
 
       const query = req.query;
       const filters: {
@@ -65,9 +68,9 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
 
       const appointments = await appointmentService.listAppointments(
         app.prisma,
-        req.auth.tenantId,
-        req.auth.userId,
-        req.auth.role,
+        auth.tenantId,
+        auth.userId,
+        auth.role,
         filters
       );
       return reply.send(appointments);
@@ -81,19 +84,17 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       schema: {
         tags: ["Appointments"],
         params: AppointmentParamsSchema,
+        response: { 200: AppointmentResponseSchema, 404: ErrorResponseSchema },
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-
+      const auth = requireAuth(req);
       const appointment = await appointmentService.getAppointment(
         app.prisma,
         req.params.id,
-        req.auth.tenantId,
-        req.auth.userId,
-        req.auth.role
+        auth.tenantId,
+        auth.userId,
+        auth.role
       );
       return reply.send(appointment);
     }
@@ -106,18 +107,16 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       schema: {
         tags: ["Appointments"],
         body: AppointmentCreateSchema,
+        response: { 201: AppointmentResponseSchema, 409: ErrorResponseSchema },
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-
+      const auth = requireAuth(req);
       const body = req.body;
       const appointment = await appointmentService.createAppointment(
         app.prisma,
-        req.auth.tenantId,
-        req.auth.userId,
+        auth.tenantId,
+        auth.userId,
         {
           customerName: body.customerName,
           customerPhone: body.customerPhone,
@@ -139,13 +138,11 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
         tags: ["Appointments"],
         params: AppointmentParamsSchema,
         body: AppointmentUpdateSchema,
+        response: { 200: AppointmentResponseSchema, 400: ErrorResponseSchema, 409: ErrorResponseSchema },
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-
+      const auth = requireAuth(req);
       const params = req.params;
       const body = req.body;
 
@@ -160,9 +157,9 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       const appointment = await appointmentService.updateAppointment(
         app.prisma,
         params.id,
-        req.auth.tenantId,
-        req.auth.userId,
-        req.auth.role,
+        auth.tenantId,
+        auth.userId,
+        auth.role,
         updateData
       );
       return reply.send(appointment);
@@ -179,16 +176,13 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-
+      const auth = requireAuth(req);
       await appointmentService.deleteAppointment(
         app.prisma,
         req.params.id,
-        req.auth.tenantId,
-        req.auth.userId,
-        req.auth.role
+        auth.tenantId,
+        auth.userId,
+        auth.role
       );
       return reply.status(204).send();
     }

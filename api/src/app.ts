@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import cors from "@fastify/cors";
+import { config } from "./config.js";
 import prismaPlugin from "./plugins/prisma.js";
 import swaggerPlugin from "./plugins/docs/swagger.js";
 import authPlugin from "./plugins/auth.js";
@@ -102,7 +103,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(cors, {
     origin: (origin, cb) => {
-      const allowed = (process.env["CORS_ORIGIN"] ?? "http://localhost:3001")
+      const allowed = config.corsOrigin
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
@@ -120,8 +121,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   await app.register(rateLimit, {
-    max: Number(process.env["RATE_LIMIT_MAX"] ?? 120),
-    timeWindow: process.env["RATE_LIMIT_WINDOW"] ?? "1 minute",
+    max: config.rateLimitMax,
+    timeWindow: config.rateLimitWindow,
     allowList: (req) => {
       const url = req.url ?? "/";
       return (

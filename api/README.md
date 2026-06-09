@@ -7,12 +7,15 @@ API REST multi-tenant para gerenciamento de agendamentos construída com Fastify
 - ✅ **Multi-Tenancy**: Row-level tenant isolation
 - ✅ **JWT Authentication**: Secure token-based auth with httpOnly cookies
 - ✅ **Role-Based Access Control**: OWNER, STAFF, CUSTOMER roles
-- ✅ **Appointment Management**: Create, update, cancel appointments
+- ✅ **Appointment Management**: Create, reschedule, cancel; status lifecycle (CONFIRMED/COMPLETED/NO_SHOW)
+- ✅ **Availability**: Real-time free-slot calculation por serviço/data, com fuso do tenant
 - ✅ **Service Management**: Define services with pricing and duration
-- ✅ **Business Hours**: Configure operating hours per day
+- ✅ **Business Hours + Breaks**: Operating hours per day e intervalos (almoço)
 - ✅ **Date Overrides**: Handle holidays and special dates
+- ✅ **Tenant Settings**: Modo de agendamento, fuso horário, granularidade de slots
+- ✅ **Self-Booking**: Cliente final agenda sozinho via `/public/:slug` (configurável)
 - ✅ **OpenAPI/Swagger**: Auto-generated API documentation
-- ✅ **Type Safety**: Full TypeScript + Zod validation
+- ✅ **Type Safety**: Full TypeScript + Zod validation (request e response)
 
 📖 **[Multi-Tenancy Guide](MULTI_TENANCY.md)** - Complete documentation on authentication, roles, and tenant isolation.
 
@@ -64,19 +67,21 @@ Se `/docs` não aparecer após deploy:
 
 ```
 api/
-├── api/
-│   └── index.js              # Handler serverless Vercel
+├── api/index.ts              # Handler serverless (Vercel — será removido na migração p/ Docker)
 ├── src/
-│   ├── app.ts                # Aplicação Fastify
-│   ├── server.ts             # Entrada local
-│   ├── application/          # Use cases e interfaces
-│   ├── infra/                # Implementações (Prisma)
-│   ├── interfaces/           # Adapters HTTP
-│   ├── plugins/              # Plugins Fastify
-│   └── routes/               # Rotas
+│   ├── app.ts                # Montagem do Fastify (plugins, error handler, rotas)
+│   ├── server.ts             # Entrypoint (listen)
+│   ├── config.ts             # Configuração validada do ambiente (Zod)
+│   ├── plugins/              # Plugins Fastify: auth, prisma, swagger
+│   ├── routes/               # Camada HTTP (controllers)
+│   ├── services/             # Regra de negócio (recebe `prisma` injetado)
+│   ├── schemas/              # Schemas Zod (request + response) — fonte única de verdade
+│   └── utils/                # Helpers: errors, guards, time, slots
 ├── prisma/
-│   └── schema.prisma         # Schema do banco
-├── vercel.json               # Configuração Vercel
+│   ├── schema.prisma         # Schema do banco
+│   └── migrations/           # Migrations versionadas
+├── tests/                    # unit/ + integration/ (Vitest)
+├── vercel.json               # Configuração Vercel (legado)
 └── package.json
 ```
 
@@ -135,21 +140,37 @@ Ver documentação completa em `/documentation` após deploy.
 
 **Services (autenticado)**
 - `GET /services` - Lista serviços
+- `GET /services/:id` - Detalhe do serviço
 - `POST /services` - Cria serviço (OWNER/STAFF)
 - `PUT /services/:id` - Atualiza serviço (OWNER)
 - `DELETE /services/:id` - Deleta serviço (OWNER)
 
 **Appointments (autenticado)**
-- `GET /appointments` - Lista agendamentos
+- `GET /availability?serviceId=&date=YYYY-MM-DD` - Horários disponíveis (slots livres)
+- `GET /appointments?from=&to=&status=&serviceId=` - Lista/agenda por data
 - `POST /appointments` - Cria agendamento
-- `PATCH /appointments/:id` - Atualiza agendamento
-- `DELETE /appointments/:id` - Cancela agendamento
+- `PATCH /appointments/:id` - Atualiza (status, reagendamento, dados)
+- `DELETE /appointments/:id` - Cancela/remove agendamento
+
+> Status do agendamento: `SCHEDULED` → `CONFIRMED` → `COMPLETED`/`NO_SHOW`, ou `CANCELED`.
+> Conflito de horário é **tenant-wide** (um profissional por tenant).
 
 **Business Hours (OWNER apenas)**
 - `GET /hours` - Lista horários
 - `POST /hours` - Cria horários
 - `PUT /hours/:id` - Atualiza horários
 - `DELETE /hours/:id` - Deleta horários
+- `POST /hours/:id/breaks` - Adiciona intervalo (almoço)
+- `DELETE /hours/:hoursId/breaks/:breakId` - Remove intervalo
+
+**Settings (configurações do tenant)**
+- `GET /settings` - Lê configurações (modo de agendamento, fuso, granularidade)
+- `PATCH /settings` - Atualiza configurações (OWNER)
+
+**Public (auto-agendamento — sem auth, requer `allowCustomerBooking`)**
+- `GET /public/:slug/services` - Serviços do estabelecimento
+- `GET /public/:slug/availability?serviceId=&date=` - Horários disponíveis
+- `POST /public/:slug/appointments` - Cliente final marca sozinho
 
 **Users (OWNER apenas)**
 - `GET /users` - Lista usuários do tenant
@@ -162,12 +183,17 @@ Ver documentação completa em `/documentation` após deploy.
 
 ## 🏗️ Arquitetura
 
-Seguindo Clean Architecture:
+Arquitetura **em camadas, pragmática** (não é Clean Architecture). O fluxo é direto e fácil de
+manter por uma pessoa:
 
-- **Application**: Use cases e interfaces de negócio
-- **Infra**: Implementações concretas (repos Prisma)
-- **Interfaces**: Adapters HTTP (routes)
-- **Core**: Entidades de domínio
+- **`routes/`** — camada HTTP (validação via Zod, RBAC via guards, chama os services)
+- **`services/`** — regra de negócio; recebe o `PrismaClient` **injetado** como argumento
+  (facilita testes), sem camada de repositório intermediária
+- **`schemas/`** — Zod como fonte única de verdade: valida request, gera tipos e o OpenAPI,
+  e serializa as respostas (schema-driven)
+- **`utils/guards.ts`** — `requireAuth` / `requireRole` reutilizáveis (sem checagem duplicada
+  de papel nos handlers)
+- **`config.ts`** — ambiente validado uma vez na inicialização (falha rápido em produção)
 
 ## 📝 Notas
 

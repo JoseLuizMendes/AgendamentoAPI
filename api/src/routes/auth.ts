@@ -2,6 +2,8 @@ import type { FastifyPluginAsync } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { SignupSchema, LoginSchema } from "../schemas/index.js";
 import * as authService from "../services/auth.js";
+import { config } from "../config.js";
+import { requireAuth } from "../utils/guards.js";
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
   const zApp = app.withTypeProvider<ZodTypeProvider>();
@@ -29,7 +31,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       // Set cookie
       reply.setCookie("token", token, {
         httpOnly: true,
-        secure: process.env["NODE_ENV"] === "production",
+        secure: config.isProduction,
         sameSite: "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 7, // 7 days
@@ -66,7 +68,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       // Set cookie
       reply.setCookie("token", token, {
         httpOnly: true,
-        secure: process.env["NODE_ENV"] === "production",
+        secure: config.isProduction,
         sameSite: "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 7, // 7 days
@@ -107,12 +109,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
+      const auth = requireAuth(req);
 
       const user = await app.prisma.user.findUnique({
-        where: { id: req.auth.userId },
+        where: { id: auth.userId },
         select: {
           id: true,
           email: true,

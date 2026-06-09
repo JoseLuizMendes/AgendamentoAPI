@@ -3,6 +3,7 @@ import fp from "fastify-plugin";
 import fastifyJwt from "@fastify/jwt";
 import fastifyCookie from "@fastify/cookie";
 import type { Role } from "@prisma/client";
+import { config } from "../config.js";
 
 export interface JWTPayload {
   userId: number;
@@ -37,8 +38,7 @@ function getRequestPath(url: string | undefined): string {
 }
 
 const authPlugin: FastifyPluginAsync = async (app) => {
-  const jwtSecret = process.env["JWT_SECRET"] ?? "development-secret-change-in-production";
-  const publicHealth = process.env["PUBLIC_HEALTH"] ?? "true";
+  const jwtSecret = config.jwtSecret;
 
   // Register JWT
   await app.register(fastifyJwt, {

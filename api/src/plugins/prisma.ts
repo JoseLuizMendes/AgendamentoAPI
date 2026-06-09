@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { config } from "../config.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -20,7 +21,7 @@ function createMissingPrismaClient(): PrismaClient {
 }
 
 const prismaPlugin: FastifyPluginAsync = async (app) => {
-  const databaseUrl = process.env["DATABASE_URL"];
+  const databaseUrl = config.databaseUrl;
 
   if (!databaseUrl) {
     // Não derruba o app no boot (útil para health/live e para diagnosticar env vars em deploy).

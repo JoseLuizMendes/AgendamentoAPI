@@ -4,10 +4,8 @@ import { buildApp } from "../../src/app.js";
 const hasDb = Boolean(process.env["DATABASE_URL"]);
 
 describe.skipIf(!hasDb)("integration/appointments", () => {
-  const date = "2026-01-16";
-  const startTime = `${date}T09:00:00.000Z`;
-
   let app: Awaited<ReturnType<typeof buildApp>>;
+  let token: string;
 
   beforeAll(async () => {
     app = await buildApp();
@@ -19,112 +17,148 @@ describe.skipIf(!hasDb)("integration/appointments", () => {
   });
 
   beforeEach(async () => {
-    // limpeza determinística (ordem por FKs)
     await app.prisma.appointment.deleteMany();
     await app.prisma.businessBreak.deleteMany();
     await app.prisma.businessHours.deleteMany();
     await app.prisma.businessDateOverride.deleteMany();
     await app.prisma.service.deleteMany();
     await app.prisma.user.deleteMany();
+    await app.prisma.tenant.deleteMany();
 
-    // sexta-feira (UTC) => 5
-    await app.prisma.businessHours.upsert({
-      where: { dayOfWeek: 5 },
-      create: { dayOfWeek: 5, openTime: "09:00", closeTime: "12:00", isOff: false },
-      update: { openTime: "09:00", closeTime: "12:00", isOff: false },
+    const signup = await app.inject({
+      method: "POST",
+      url: "/auth/signup",
+      payload: {
+        email: "owner@example.com",
+        password: "password123",
+        tenantName: "Clinica",
+        tenantSlug: "clinica",
+      },
     });
+    token = signup.json().token;
   });
 
-  it("cria agendamento e bloqueia conflito por overlap", async () => {
-    const service = await app.prisma.service.create({
-      data: { name: "Corte", priceInCents: 5000, durationInMinutes: 60 },
+  async function createService(name: string, durationInMinutes: number): Promise<number> {
+    const res = await app.inject({
+      method: "POST",
+      url: "/services",
+      headers: { authorization: `Bearer ${token}` },
+      payload: { name, priceInCents: 5000, durationInMinutes },
     });
+    return res.json().id as number;
+  }
+
+  it("bloqueia conflito tenant-wide mesmo entre serviços diferentes (409)", async () => {
+    const limpeza = await createService("Limpeza", 30);
+    const canal = await createService("Canal", 60);
 
     const first = await app.inject({
       method: "POST",
       url: "/appointments",
+      headers: { authorization: `Bearer ${token}` },
       payload: {
-        customerName: "José",
+        customerName: "Jose",
         customerPhone: "559999999999",
-        serviceId: service.id,
-        startTime,
+        serviceId: limpeza,
+        startTime: "2026-06-15T14:00:00.000Z",
       },
     });
-
     expect(first.statusCode).toBe(201);
-    const a1 = first.json();
-    expect(a1.serviceId).toBe(service.id);
-    expect(a1.status).toBe("SCHEDULED");
 
+    // Outro serviço, horário sobreposto -> deve conflitar (1 profissional)
     const second = await app.inject({
       method: "POST",
       url: "/appointments",
+      headers: { authorization: `Bearer ${token}` },
       payload: {
         customerName: "Maria",
         customerPhone: "558888888888",
-        serviceId: service.id,
-        startTime, // mesmo horário
+        serviceId: canal,
+        startTime: "2026-06-15T14:15:00.000Z",
       },
     });
-
     expect(second.statusCode).toBe(409);
   });
 
-  it("atualiza status de agendamento para CANCELED", async () => {
-    const service = await app.prisma.service.create({
-      data: { name: "Consulta", priceInCents: 10000, durationInMinutes: 30 },
-    });
+  it("valida transições de status (CANCELED -> COMPLETED é 400)", async () => {
+    const limpeza = await createService("Limpeza", 30);
 
     const created = await app.inject({
       method: "POST",
       url: "/appointments",
+      headers: { authorization: `Bearer ${token}` },
       payload: {
         customerName: "Ana",
         customerPhone: "557777777777",
-        serviceId: service.id,
-        startTime,
+        serviceId: limpeza,
+        startTime: "2026-06-15T15:00:00.000Z",
       },
     });
+    const id = created.json().id as number;
 
-    expect(created.statusCode).toBe(201);
-    const appt = created.json() as { id: number; status: string };
-    expect(appt.status).toBe("SCHEDULED");
-
-    const updated = await app.inject({
+    // SCHEDULED -> CONFIRMED (ok)
+    const confirm = await app.inject({
       method: "PATCH",
-      url: `/appointments/${appt.id}`,
+      url: `/appointments/${id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { status: "CONFIRMED" },
+    });
+    expect(confirm.statusCode).toBe(200);
+    expect(confirm.json().status).toBe("CONFIRMED");
+
+    // CONFIRMED -> CANCELED (ok)
+    const cancel = await app.inject({
+      method: "PATCH",
+      url: `/appointments/${id}`,
+      headers: { authorization: `Bearer ${token}` },
       payload: { status: "CANCELED" },
     });
+    expect(cancel.statusCode).toBe(200);
 
-    expect(updated.statusCode).toBe(200);
-    const canceled = updated.json() as { status: string };
-    expect(canceled.status).toBe("CANCELED");
+    // CANCELED -> COMPLETED (inválido)
+    const invalid = await app.inject({
+      method: "PATCH",
+      url: `/appointments/${id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { status: "COMPLETED" },
+    });
+    expect(invalid.statusCode).toBe(400);
   });
 
-  it("lista agendamentos com filtros", async () => {
-    const service = await app.prisma.service.create({
-      data: { name: "Barba", priceInCents: 3000, durationInMinutes: 60 },
-    });
+  it("filtra agendamentos por intervalo de data (from/to)", async () => {
+    const limpeza = await createService("Limpeza", 30);
 
     await app.inject({
       method: "POST",
       url: "/appointments",
+      headers: { authorization: `Bearer ${token}` },
       payload: {
-        customerName: "Paulo",
-        customerPhone: "556666666666",
-        serviceId: service.id,
-        startTime,
+        customerName: "Dia15",
+        customerPhone: "551111111111",
+        serviceId: limpeza,
+        startTime: "2026-06-15T14:00:00.000Z",
+      },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/appointments",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        customerName: "Dia20",
+        customerPhone: "552222222222",
+        serviceId: limpeza,
+        startTime: "2026-06-20T14:00:00.000Z",
       },
     });
 
     const res = await app.inject({
       method: "GET",
-      url: `/appointments?serviceId=${service.id}`,
+      url: "/appointments?from=2026-06-15T00:00:00.000Z&to=2026-06-16T00:00:00.000Z",
+      headers: { authorization: `Bearer ${token}` },
     });
-
     expect(res.statusCode).toBe(200);
-    const appointments = res.json() as Array<{ customerName: string; serviceId: number }>;
-    expect(appointments.length).toBeGreaterThan(0);
-    expect(appointments[0].customerName).toBe("Paulo");
+    const list = res.json() as Array<{ customerName: string }>;
+    expect(list).toHaveLength(1);
+    expect(list[0].customerName).toBe("Dia15");
   });
 });

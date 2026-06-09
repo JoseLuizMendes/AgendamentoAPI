@@ -1,13 +1,11 @@
 import "dotenv/config";
 import { buildApp } from "./app.js";
+import { config } from "./config.js";
 
 const app = await buildApp();
 
-const port = Number(process.env["PORT"] ?? 3000);
-const host = process.env["HOST"] ?? "0.0.0.0";
-
 try {
-  await app.listen({ port, host });
+  await app.listen({ port: config.port, host: config.host });
 } catch (err) {
   app.log.error(err);
   process.exit(1);

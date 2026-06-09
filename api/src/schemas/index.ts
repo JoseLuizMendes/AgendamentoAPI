@@ -175,6 +175,53 @@ export const ErrorResponseSchema = z.object({
   message: z.string(),
 });
 
+export const ServiceResponseSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  priceInCents: z.number(),
+  durationInMinutes: z.number(),
+  tenantId: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const ServiceListResponseSchema = z.array(ServiceResponseSchema);
+
+export const AppointmentResponseSchema = z.object({
+  id: z.number(),
+  customerName: z.string(),
+  customerPhone: z.string(),
+  customerEmail: z.string().nullable(),
+  notes: z.string().nullable(),
+  serviceId: z.number(),
+  userId: z.number().nullable(),
+  tenantId: z.number(),
+  startTime: z.date(),
+  endTime: z.date(),
+  status: AppointmentStatusEnum,
+  version: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  service: ServiceResponseSchema.optional(),
+});
+
+export const AppointmentListResponseSchema = z.array(AppointmentResponseSchema);
+
+export const SlotResponseSchema = z.array(
+  z.object({
+    startTime: z.string(),
+    endTime: z.string(),
+  })
+);
+
+export const SettingsResponseSchema = z.object({
+  allowCustomerBooking: z.boolean(),
+  timezone: z.string(),
+  slotIntervalMinutes: z.number(),
+  minLeadTimeMinutes: z.number(),
+  maxAdvanceDays: z.number(),
+});
+
 export type SignupInput = z.infer<typeof SignupSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type UserCreate = z.infer<typeof UserCreateSchema>;

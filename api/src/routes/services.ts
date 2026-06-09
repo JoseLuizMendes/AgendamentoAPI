@@ -4,8 +4,12 @@ import {
   ServiceCreateSchema,
   ServiceUpdateSchema,
   ServiceParamsSchema,
+  ServiceResponseSchema,
+  ServiceListResponseSchema,
+  ErrorResponseSchema,
 } from "../schemas/index.js";
 import * as serviceService from "../services/services.js";
+import { requireAuth, requireRole } from "../utils/guards.js";
 
 export const servicesRoutes: FastifyPluginAsync = async (app) => {
   const zApp = app.withTypeProvider<ZodTypeProvider>();
@@ -16,61 +20,65 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
     {
       schema: {
         tags: ["Services"],
+        response: { 200: ServiceListResponseSchema },
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      const services = await serviceService.listServices(app.prisma, req.auth.tenantId);
+      const auth = requireAuth(req);
+      const services = await serviceService.listServices(app.prisma, auth.tenantId);
       return reply.send(services);
     }
   );
 
-  // POST /services - Create service
-  zApp.post(
-    "/services",
-    {
-      schema: {
-        tags: ["Services"],
-        body: ServiceCreateSchema,
-      },
-    },
-    async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      
-      // Only OWNER and STAFF can create services
-      if (req.auth.role !== "OWNER" && req.auth.role !== "STAFF") {
-        return reply.status(403).send({ message: "Sem permissão para criar serviços" });
-      }
-
-      const service = await serviceService.createService(app.prisma, req.auth.tenantId, req.body);
-      return reply.status(201).send(service);
-    }
-  );
-
-  // PUT /services/:id - Update service
-  zApp.put(
+  // GET /services/:id - Get a single service
+  zApp.get(
     "/services/:id",
     {
       schema: {
         tags: ["Services"],
         params: ServiceParamsSchema,
-        body: ServiceUpdateSchema,
+        response: { 200: ServiceResponseSchema, 404: ErrorResponseSchema },
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      
-      // Only OWNER can update services
-      if (req.auth.role !== "OWNER") {
-        return reply.status(403).send({ message: "Sem permissão para atualizar serviços" });
-      }
+      const auth = requireAuth(req);
+      const service = await serviceService.getService(app.prisma, req.params.id, auth.tenantId);
+      return reply.send(service);
+    }
+  );
 
+  // POST /services - Create service (OWNER/STAFF)
+  zApp.post(
+    "/services",
+    {
+      preHandler: requireRole("OWNER", "STAFF"),
+      schema: {
+        tags: ["Services"],
+        body: ServiceCreateSchema,
+        response: { 201: ServiceResponseSchema },
+      },
+    },
+    async (req, reply) => {
+      const auth = requireAuth(req);
+      const service = await serviceService.createService(app.prisma, auth.tenantId, req.body);
+      return reply.status(201).send(service);
+    }
+  );
+
+  // PUT /services/:id - Update service (OWNER)
+  zApp.put(
+    "/services/:id",
+    {
+      preHandler: requireRole("OWNER"),
+      schema: {
+        tags: ["Services"],
+        params: ServiceParamsSchema,
+        body: ServiceUpdateSchema,
+        response: { 200: ServiceResponseSchema, 404: ErrorResponseSchema },
+      },
+    },
+    async (req, reply) => {
+      const auth = requireAuth(req);
       const data: {
         name?: string;
         priceInCents?: number;
@@ -79,32 +87,25 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
       if (req.body.name !== undefined) data.name = req.body.name;
       if (req.body.priceInCents !== undefined) data.priceInCents = req.body.priceInCents;
       if (req.body.durationInMinutes !== undefined) data.durationInMinutes = req.body.durationInMinutes;
-    
-      const service = await serviceService.updateService(app.prisma, req.params.id, req.auth.tenantId, data);
+
+      const service = await serviceService.updateService(app.prisma, req.params.id, auth.tenantId, data);
       return reply.send(service);
     }
   );
 
-  // DELETE /services/:id - Delete service
+  // DELETE /services/:id - Delete service (OWNER)
   zApp.delete(
     "/services/:id",
     {
+      preHandler: requireRole("OWNER"),
       schema: {
         tags: ["Services"],
         params: ServiceParamsSchema,
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      
-      // Only OWNER can delete services
-      if (req.auth.role !== "OWNER") {
-        return reply.status(403).send({ message: "Sem permissão para deletar serviços" });
-      }
-
-      await serviceService.deleteService(app.prisma, req.params.id, req.auth.tenantId);
+      const auth = requireAuth(req);
+      await serviceService.deleteService(app.prisma, req.params.id, auth.tenantId);
       return reply.status(204).send();
     }
   );

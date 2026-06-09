@@ -9,6 +9,7 @@ import {
   HoursIdParamsSchema,
 } from "../schemas/index.js";
 import * as hoursService from "../services/hours.js";
+import { requireAuth, requireRole } from "../utils/guards.js";
 
 export const hoursRoutes: FastifyPluginAsync = async (app) => {
   const zApp = app.withTypeProvider<ZodTypeProvider>();
@@ -22,33 +23,24 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      const hours = await hoursService.listBusinessHours(app.prisma, req.auth.tenantId);
+      const auth = requireAuth(req);
+      const hours = await hoursService.listBusinessHours(app.prisma, auth.tenantId);
       return reply.send(hours);
     }
   );
 
-  // POST /hours - Create business hours
+  // POST /hours - Create business hours (OWNER)
   zApp.post(
     "/hours",
     {
+      preHandler: requireRole("OWNER"),
       schema: {
         tags: ["BusinessHours"],
         body: BusinessHoursCreateSchema,
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      
-      // Only OWNER can create business hours
-      if (req.auth.role !== "OWNER") {
-        return reply.status(403).send({ message: "Sem permissão para criar horários de funcionamento" });
-      }
-
+      const auth = requireAuth(req);
       const body = req.body;
       const data: {
         dayOfWeek: number;
@@ -61,16 +53,17 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
         closeTime: body.closeTime,
       };
       if (body.isOff !== undefined) data.isOff = body.isOff;
-    
-      const hours = await hoursService.createBusinessHours(app.prisma, req.auth.tenantId, data);
+
+      const hours = await hoursService.createBusinessHours(app.prisma, auth.tenantId, data);
       return reply.status(201).send(hours);
     }
   );
 
-  // PUT /hours/:id - Update business hours
+  // PUT /hours/:id - Update business hours (OWNER)
   zApp.put(
     "/hours/:id",
     {
+      preHandler: requireRole("OWNER"),
       schema: {
         tags: ["BusinessHours"],
         params: BusinessHoursParamsSchema,
@@ -78,15 +71,7 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      
-      // Only OWNER can update business hours
-      if (req.auth.role !== "OWNER") {
-        return reply.status(403).send({ message: "Sem permissão para atualizar horários de funcionamento" });
-      }
-
+      const auth = requireAuth(req);
       const params = req.params;
       const body = req.body;
       const data: {
@@ -97,32 +82,25 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
       if (body.openTime !== undefined) data.openTime = body.openTime;
       if (body.closeTime !== undefined) data.closeTime = body.closeTime;
       if (body.isOff !== undefined) data.isOff = body.isOff;
-    
-      const hours = await hoursService.updateBusinessHours(app.prisma, params.id, req.auth.tenantId, data);
+
+      const hours = await hoursService.updateBusinessHours(app.prisma, params.id, auth.tenantId, data);
       return reply.send(hours);
     }
   );
 
-  // DELETE /hours/:id - Delete business hours
+  // DELETE /hours/:id - Delete business hours (OWNER)
   zApp.delete(
     "/hours/:id",
     {
+      preHandler: requireRole("OWNER"),
       schema: {
         tags: ["BusinessHours"],
         params: BusinessHoursParamsSchema,
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      
-      // Only OWNER can delete business hours
-      if (req.auth.role !== "OWNER") {
-        return reply.status(403).send({ message: "Sem permissão para deletar horários de funcionamento" });
-      }
-
-      await hoursService.deleteBusinessHours(app.prisma, req.params.id, req.auth.tenantId);
+      const auth = requireAuth(req);
+      await hoursService.deleteBusinessHours(app.prisma, req.params.id, auth.tenantId);
       return reply.status(204).send();
     }
   );
@@ -131,6 +109,7 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
   zApp.post(
     "/hours/:id/breaks",
     {
+      preHandler: requireRole("OWNER"),
       schema: {
         tags: ["BusinessHours"],
         params: HoursIdParamsSchema,
@@ -138,13 +117,8 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      if (req.auth.role !== "OWNER") {
-        return reply.status(403).send({ message: "Sem permissão para criar intervalos" });
-      }
-      const brk = await hoursService.createBreak(app.prisma, req.params.id, req.auth.tenantId, {
+      const auth = requireAuth(req);
+      const brk = await hoursService.createBreak(app.prisma, req.params.id, auth.tenantId, {
         startTime: req.body.startTime,
         endTime: req.body.endTime,
       });
@@ -156,19 +130,15 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
   zApp.delete(
     "/hours/:hoursId/breaks/:breakId",
     {
+      preHandler: requireRole("OWNER"),
       schema: {
         tags: ["BusinessHours"],
         params: BreakParamsSchema,
       },
     },
     async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ message: "Não autenticado" });
-      }
-      if (req.auth.role !== "OWNER") {
-        return reply.status(403).send({ message: "Sem permissão para deletar intervalos" });
-      }
-      await hoursService.deleteBreak(app.prisma, req.params.hoursId, req.params.breakId, req.auth.tenantId);
+      const auth = requireAuth(req);
+      await hoursService.deleteBreak(app.prisma, req.params.hoursId, req.params.breakId, auth.tenantId);
       return reply.status(204).send();
     }
   );
