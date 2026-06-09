@@ -1,0 +1,7 @@
+# HTTPS automático (Let's Encrypt) para o domínio definido em $DOMAIN.
+# Requer DNS apontando o domínio para o IP da VPS e portas 80/443 abertas.
+
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy api:3000
+}

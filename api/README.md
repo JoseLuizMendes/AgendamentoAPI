@@ -19,55 +19,47 @@ API REST multi-tenant para gerenciamento de agendamentos construída com Fastify
 
 📖 **[Multi-Tenancy Guide](MULTI_TENANCY.md)** - Complete documentation on authentication, roles, and tenant isolation.
 
-## 🚀 Deploy na Vercel
+## 🚀 Deploy (Docker + VPS)
 
-### Configuração
+A API roda em container Docker numa VPS, atrás do Caddy (HTTPS automático), com banco no Neon.
+Deploy automático por push na `main` via GitHub Actions (build → GHCR → SSH na VPS).
 
-1. **Conecte o repositório na Vercel**
-   - Importe o projeto do GitHub
-   - Root Directory: `api`
-   - Framework Preset: Other
-   - Build Command: `pnpm vercel-build`
-   - Output Directory: (deixe vazio)
-   - Install Command: `pnpm install`
+📖 **Guia completo de deploy e hardening: [DEPLOY.md](DEPLOY.md)**
 
-2. **Variáveis de ambiente necessárias:**
+### Variáveis de ambiente
+
+Veja **[.env.example](.env.example)** para a lista completa. As obrigatórias:
 
 ```env
-# Database (obrigatório)
-DATABASE_URL=postgresql://user:password@host:5432/database
-
-# JWT Secret (obrigatório em produção)
-JWT_SECRET=seu-jwt-secret-minimo-32-chars-para-producao
-
-# Opcional
+DATABASE_URL=postgresql://user:password@host/db?sslmode=require
+DIRECT_DATABASE_URL=postgresql://user:password@host/db?sslmode=require   # migrations
+JWT_SECRET=string-aleatoria-de-32-mais-caracteres                        # obrigatório em produção
 NODE_ENV=production
-PUBLIC_HEALTH=true
-RATE_LIMIT_MAX=120
-RATE_LIMIT_WINDOW=1 minute
+CORS_ORIGIN=https://app.seudominio.com
+DOMAIN=api.seudominio.com
+```
+
+### Build e execução local da imagem
+
+```bash
+docker build -t agendamento-api ./api
+docker run --env-file ./api/.env -p 3000:3000 agendamento-api
 ```
 
 ### Acesso
 
-- **Documentação**: `https://seu-app.vercel.app/documentation`
-- **Auth**: 
-  - Signup: `POST /auth/signup` (create tenant + owner)
-  - Login: `POST /auth/login` (get JWT token)
-- **API**: Use JWT token em cookie ou `Authorization: Bearer <token>` header
-- **Health check**: `https://seu-app.vercel.app/health/live` (público)
-
-### Debug em produção
-
-Se `/docs` não aparecer após deploy:
-1. Acesse `https://seu-app.vercel.app/debug/routes` para ver rotas registradas
-2. Veja logs da Function no dashboard da Vercel
-3. Consulte [TROUBLESHOOTING.md](TROUBLESHOOTING.md) para guia completo
+- **Documentação**: `https://api.seudominio.com/documentation`
+- **Health check** (público): `https://api.seudominio.com/health/live`
+- **Auth**: `POST /auth/signup`, `POST /auth/login` (JWT em cookie ou `Authorization: Bearer`)
 
 ## 📦 Estrutura do Projeto
 
 ```
 api/
-├── api/index.ts              # Handler serverless (Vercel — será removido na migração p/ Docker)
+├── Dockerfile                # Imagem de produção (multi-stage)
+├── docker-compose.yml        # Produção (api + redis + caddy)
+├── docker-compose.dev.yml    # Local (postgres + redis para testes)
+├── Caddyfile                 # Reverse proxy + HTTPS automático
 ├── src/
 │   ├── app.ts                # Montagem do Fastify (plugins, error handler, rotas)
 │   ├── server.ts             # Entrypoint (listen)

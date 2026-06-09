@@ -93,7 +93,6 @@ export async function buildApp(): Promise<FastifyInstance> {
           "'unsafe-inline'",
           "https://unpkg.com",
           "https://cdn.jsdelivr.net",
-          "https://vercel.live",
         ],
         styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
         imgSrc: ["'self'", "data:", "https:"],

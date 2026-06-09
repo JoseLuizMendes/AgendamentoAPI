@@ -1,0 +1,37 @@
+# Ambiente LOCAL de desenvolvimento/testes.
+# Sobe Postgres + Redis para rodar os testes de integração sem depender do Neon.
+#
+# Uso:
+#   docker compose -f docker-compose.dev.yml up -d
+#   DATABASE_URL="postgresql://postgres:postgres@localhost:5434/agendamento?schema=public" \
+#     JWT_SECRET="dev-secret-com-32-mais-caracteres-aqui-ok" pnpm test:integration
+#
+# A API em si roda no host com `pnpm dev` (porta 3000).
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agendamento
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata_dev:/data
+
+volumes:
+  pgdata_dev:
+  redisdata_dev:
