@@ -32,8 +32,8 @@
   "license": "ISC",
   "packageManager": "pnpm@10.21.0",
   "dependencies": {
-    "@fastify/cors": "^11.1.0",
     "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.1.0",
     "@fastify/env": "^5.0.3",
     "@fastify/helmet": "^13.0.0",
     "@fastify/jwt": "^10.0.0",
@@ -47,11 +47,13 @@
     "fastify": "^5.6.2",
     "fastify-plugin": "^5.1.0",
     "fastify-type-provider-zod": "^6.1.0",
+    "luxon": "^3.7.2",
     "pg": "^8.17.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/luxon": "^3.7.1",
     "@types/node": "^25.0.8",
     "@vitest/coverage-v8": "^4.0.17",
     "prisma": "^7.2.0",

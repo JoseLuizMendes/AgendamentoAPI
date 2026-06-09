@@ -4,6 +4,9 @@ import {
   BusinessHoursCreateSchema,
   BusinessHoursUpdateSchema,
   BusinessHoursParamsSchema,
+  BreakCreateSchema,
+  BreakParamsSchema,
+  HoursIdParamsSchema,
 } from "../schemas/index.js";
 import * as hoursService from "../services/hours.js";
 
@@ -120,6 +123,52 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
       }
 
       await hoursService.deleteBusinessHours(app.prisma, req.params.id, req.auth.tenantId);
+      return reply.status(204).send();
+    }
+  );
+
+  // POST /hours/:id/breaks - Adiciona um intervalo ao dia (OWNER)
+  zApp.post(
+    "/hours/:id/breaks",
+    {
+      schema: {
+        tags: ["BusinessHours"],
+        params: HoursIdParamsSchema,
+        body: BreakCreateSchema,
+      },
+    },
+    async (req, reply) => {
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+      if (req.auth.role !== "OWNER") {
+        return reply.status(403).send({ message: "Sem permissão para criar intervalos" });
+      }
+      const brk = await hoursService.createBreak(app.prisma, req.params.id, req.auth.tenantId, {
+        startTime: req.body.startTime,
+        endTime: req.body.endTime,
+      });
+      return reply.status(201).send(brk);
+    }
+  );
+
+  // DELETE /hours/:hoursId/breaks/:breakId - Remove um intervalo (OWNER)
+  zApp.delete(
+    "/hours/:hoursId/breaks/:breakId",
+    {
+      schema: {
+        tags: ["BusinessHours"],
+        params: BreakParamsSchema,
+      },
+    },
+    async (req, reply) => {
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+      if (req.auth.role !== "OWNER") {
+        return reply.status(403).send({ message: "Sem permissão para deletar intervalos" });
+      }
+      await hoursService.deleteBreak(app.prisma, req.params.hoursId, req.params.breakId, req.auth.tenantId);
       return reply.status(204).send();
     }
   );

@@ -48,16 +48,30 @@ export const ServiceParamsSchema = z.object({
 });
 
 // Appointment schemas
+export const AppointmentStatusEnum = z.enum([
+  "SCHEDULED",
+  "CONFIRMED",
+  "COMPLETED",
+  "NO_SHOW",
+  "CANCELED",
+]);
+
 export const AppointmentCreateSchema = z.object({
   customerName: z.string().min(1).max(200),
   customerPhone: z.string().min(6).max(30),
+  customerEmail: z.string().email().optional(),
+  notes: z.string().max(2000).optional(),
   serviceId: z.number().int().positive(),
   startTime: z.string().datetime(),
 });
 
 export const AppointmentUpdateSchema = z.object({
-  status: z.enum(["SCHEDULED", "CANCELED"]).optional(),
+  status: AppointmentStatusEnum.optional(),
   startTime: z.string().datetime().optional(),
+  customerName: z.string().min(1).max(200).optional(),
+  customerPhone: z.string().min(6).max(30).optional(),
+  customerEmail: z.string().email().optional(),
+  notes: z.string().max(2000).optional(),
 });
 
 export const AppointmentParamsSchema = z.object({
@@ -66,7 +80,15 @@ export const AppointmentParamsSchema = z.object({
 
 export const AppointmentQuerySchema = z.object({
   serviceId: z.coerce.number().int().positive().optional(),
-  status: z.string().optional(),
+  status: AppointmentStatusEnum.optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+});
+
+// Availability schema
+export const AvailabilityQuerySchema = z.object({
+  serviceId: z.coerce.number().int().positive(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
 // Business Hours schemas
@@ -103,6 +125,49 @@ export const OverrideUpdateSchema = z.object({
 
 export const OverrideParamsSchema = z.object({
   id: z.coerce.number().int().positive(),
+});
+
+// Business Break schemas
+export const BreakCreateSchema = z.object({
+  startTime: z.string().regex(/^\d{2}:\d{2}$/),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/),
+});
+
+export const BreakParamsSchema = z.object({
+  hoursId: z.coerce.number().int().positive(),
+  breakId: z.coerce.number().int().positive(),
+});
+
+export const HoursIdParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
+// Tenant settings schemas
+export const SettingsUpdateSchema = z.object({
+  allowCustomerBooking: z.boolean().optional(),
+  timezone: z.string().min(1).optional(),
+  slotIntervalMinutes: z.number().int().min(5).max(240).optional(),
+  minLeadTimeMinutes: z.number().int().min(0).max(60 * 24 * 30).optional(),
+  maxAdvanceDays: z.number().int().min(1).max(730).optional(),
+});
+
+// Public (self-booking) schemas
+export const PublicParamsSchema = z.object({
+  slug: z.string().min(1),
+});
+
+export const PublicAvailabilityQuerySchema = z.object({
+  serviceId: z.coerce.number().int().positive(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+export const PublicAppointmentCreateSchema = z.object({
+  customerName: z.string().min(1).max(200),
+  customerPhone: z.string().min(6).max(30),
+  customerEmail: z.string().email().optional(),
+  notes: z.string().max(2000).optional(),
+  serviceId: z.number().int().positive(),
+  startTime: z.string().datetime(),
 });
 
 // Response schemas

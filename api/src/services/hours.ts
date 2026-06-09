@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
-import { NotFoundError } from "../utils/errors.js";
+import { NotFoundError, ValidationError } from "../utils/errors.js";
+import { parseTimeToMinutes } from "../utils/time.js";
 
 export async function listBusinessHours(prisma: PrismaClient, tenantId: number) {
   return prisma.businessHours.findMany({
@@ -87,4 +88,45 @@ export async function deleteBusinessHours(prisma: PrismaClient, id: number, tena
     }
     throw error;
   }
+}
+
+// ---- Intervalos (almoço/pausas) ----
+
+export async function createBreak(
+  prisma: PrismaClient,
+  hoursId: number,
+  tenantId: number,
+  data: { startTime: string; endTime: string }
+) {
+  // Garante que o BusinessHours pertence ao tenant
+  await getBusinessHours(prisma, hoursId, tenantId);
+
+  if (parseTimeToMinutes(data.endTime) <= parseTimeToMinutes(data.startTime)) {
+    throw new ValidationError("Intervalo inválido: fim deve ser depois do início");
+  }
+
+  return prisma.businessBreak.create({
+    data: {
+      businessHoursId: hoursId,
+      startTime: data.startTime,
+      endTime: data.endTime,
+    },
+  });
+}
+
+export async function deleteBreak(
+  prisma: PrismaClient,
+  hoursId: number,
+  breakId: number,
+  tenantId: number
+) {
+  // Garante que o BusinessHours pertence ao tenant
+  await getBusinessHours(prisma, hoursId, tenantId);
+
+  const brk = await prisma.businessBreak.findUnique({ where: { id: breakId } });
+  if (!brk || brk.businessHoursId !== hoursId) {
+    throw new NotFoundError("Intervalo não encontrado");
+  }
+
+  await prisma.businessBreak.delete({ where: { id: breakId } });
 }

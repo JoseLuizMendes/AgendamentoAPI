@@ -1,6 +1,52 @@
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient, type AppointmentStatus } from "@prisma/client";
 import { NotFoundError, ConflictError, ValidationError } from "../utils/errors.js";
 import { getService } from "./services.js";
+
+/** Status que ocupam o slot (bloqueiam novos agendamentos no mesmo horário). */
+const ACTIVE_STATUSES: AppointmentStatus[] = ["SCHEDULED", "CONFIRMED"];
+
+/** Transições de status permitidas. */
+const ALLOWED_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  SCHEDULED: ["CONFIRMED", "COMPLETED", "NO_SHOW", "CANCELED"],
+  CONFIRMED: ["COMPLETED", "NO_SHOW", "CANCELED"],
+  COMPLETED: [],
+  NO_SHOW: [],
+  CANCELED: [],
+};
+
+type PrismaTx = Prisma.TransactionClient | PrismaClient;
+
+function buildOverlapWhere(
+  tenantId: number,
+  startTime: Date,
+  endTime: Date,
+  excludeId?: number
+): Prisma.AppointmentWhereInput {
+  return {
+    tenantId,
+    status: { in: ACTIVE_STATUSES },
+    ...(excludeId ? { id: { not: excludeId } } : {}),
+    // Sobreposição: existente.start < novo.end E existente.end > novo.start
+    startTime: { lt: endTime },
+    endTime: { gt: startTime },
+  };
+}
+
+async function assertNoConflict(
+  tx: PrismaTx,
+  tenantId: number,
+  startTime: Date,
+  endTime: Date,
+  excludeId?: number
+): Promise<void> {
+  const conflict = await tx.appointment.findFirst({
+    where: buildOverlapWhere(tenantId, startTime, endTime, excludeId),
+    select: { id: true },
+  });
+  if (conflict) {
+    throw new ConflictError("Já existe um agendamento nesse horário");
+  }
+}
 
 export async function listAppointments(
   prisma: PrismaClient,
@@ -9,42 +55,52 @@ export async function listAppointments(
   role?: string,
   filters?: {
     serviceId?: number;
-    status?: string;
+    status?: AppointmentStatus;
+    from?: Date;
+    to?: Date;
   }
 ) {
-  // CUSTOMER can only see their own appointments
-  const where: any = {
+  const where: Prisma.AppointmentWhereInput = {
     tenantId,
     ...(filters?.serviceId && { serviceId: filters.serviceId }),
-    ...(filters?.status && { status: filters.status as any }),
+    ...(filters?.status && { status: filters.status }),
   };
 
+  if (filters?.from || filters?.to) {
+    where.startTime = {
+      ...(filters.from && { gte: filters.from }),
+      ...(filters.to && { lte: filters.to }),
+    };
+  }
+
+  // CUSTOMER só vê os próprios agendamentos
   if (role === "CUSTOMER" && userId) {
     where.userId = userId;
   }
 
   return prisma.appointment.findMany({
     where,
-    include: {
-      service: true,
-    },
+    include: { service: true },
     orderBy: { startTime: "asc" },
   });
 }
 
-export async function getAppointment(prisma: PrismaClient, id: number, tenantId: number, userId?: number, role?: string) {
+export async function getAppointment(
+  prisma: PrismaClient,
+  id: number,
+  tenantId: number,
+  userId?: number,
+  role?: string
+) {
   const appointment = await prisma.appointment.findUnique({
     where: { id },
-    include: {
-      service: true,
-    },
+    include: { service: true },
   });
 
   if (!appointment || appointment.tenantId !== tenantId) {
     throw new NotFoundError("Agendamento não encontrado");
   }
 
-  // CUSTOMER can only see their own appointments
   if (role === "CUSTOMER" && appointment.userId !== userId) {
     throw new NotFoundError("Agendamento não encontrado");
   }
@@ -59,6 +115,8 @@ export async function createAppointment(
   data?: {
     customerName: string;
     customerPhone: string;
+    customerEmail?: string | undefined;
+    notes?: string | undefined;
     serviceId: number;
     startTime: Date;
   }
@@ -67,58 +125,39 @@ export async function createAppointment(
     throw new ValidationError("Dados do agendamento não fornecidos");
   }
 
-  // Validate service exists and belongs to tenant
+  // Valida serviço e calcula término
   const service = await getService(prisma, data.serviceId, tenantId);
+  const endTime = new Date(data.startTime.getTime() + service.durationInMinutes * 60_000);
 
-  // Calculate end time
-  const endTime = new Date(data.startTime);
-  endTime.setMinutes(endTime.getMinutes() + service.durationInMinutes);
-
-  // Check for conflicts within the same tenant
-  const conflictingAppointment = await prisma.appointment.findFirst({
-    where: {
-      tenantId,
-      serviceId: data.serviceId,
-      status: "SCHEDULED",
-      OR: [
-        {
-          AND: [
-            { startTime: { lte: data.startTime } },
-            { endTime: { gt: data.startTime } },
-          ],
-        },
-        {
-          AND: [
-            { startTime: { lt: endTime } },
-            { endTime: { gte: endTime } },
-          ],
-        },
-        {
-          AND: [
-            { startTime: { gte: data.startTime } },
-            { endTime: { lte: endTime } },
-          ],
-        },
-      ],
-    },
-  });
-
-  if (conflictingAppointment) {
-    throw new ConflictError("Já existe um agendamento nesse horário");
+  // Transação serializável: re-checa conflito e cria atomicamente (anti corrida de duplo-agendamento)
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        await assertNoConflict(tx, tenantId, data.startTime, endTime);
+        return tx.appointment.create({
+          data: {
+            customerName: data.customerName,
+            customerPhone: data.customerPhone,
+            customerEmail: data.customerEmail ?? null,
+            notes: data.notes ?? null,
+            serviceId: data.serviceId,
+            userId: userId ?? null,
+            tenantId,
+            startTime: data.startTime,
+            endTime,
+            status: "SCHEDULED",
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+  } catch (err) {
+    // Falha de serialização concorrente -> tratar como conflito de horário
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
+      throw new ConflictError("Já existe um agendamento nesse horário");
+    }
+    throw err;
   }
-
-  return prisma.appointment.create({
-    data: {
-      customerName: data.customerName,
-      customerPhone: data.customerPhone,
-      serviceId: data.serviceId,
-      userId: userId ?? null,
-      tenantId,
-      startTime: data.startTime,
-      endTime,
-      status: "SCHEDULED",
-    },
-  });
 }
 
 export async function updateAppointment(
@@ -128,86 +167,98 @@ export async function updateAppointment(
   userId?: number,
   role?: string,
   data?: {
-    status?: "SCHEDULED" | "CANCELED";
-    startTime?: Date;
+    status?: AppointmentStatus | undefined;
+    startTime?: Date | undefined;
+    customerName?: string | undefined;
+    customerPhone?: string | undefined;
+    customerEmail?: string | undefined;
+    notes?: string | undefined;
   }
 ) {
   const appointment = await getAppointment(prisma, id, tenantId, userId, role);
 
-  // CUSTOMER can only cancel their own appointments
+  // Regras para CUSTOMER: só pode cancelar o próprio agendamento, não reagendar/editar dados
   if (role === "CUSTOMER") {
     if (appointment.userId !== userId) {
       throw new NotFoundError("Agendamento não encontrado");
     }
-    // Customer can only cancel, not reschedule
     if (data?.startTime) {
       throw new ValidationError("Clientes não podem reagendar. Cancele e crie um novo agendamento.");
     }
+    if (data?.status && data.status !== "CANCELED") {
+      throw new ValidationError("Clientes só podem cancelar agendamentos.");
+    }
   }
 
-  if (data?.startTime && appointment.serviceId) {
-    const service = await getService(prisma, appointment.serviceId, tenantId);
-    const endTime = new Date(data.startTime);
-    endTime.setMinutes(endTime.getMinutes() + service.durationInMinutes);
-
-    // Check for conflicts (excluding current appointment)
-    const conflictingAppointment = await prisma.appointment.findFirst({
-      where: {
-        id: { not: id },
-        tenantId,
-        serviceId: appointment.serviceId,
-        status: "SCHEDULED",
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: data.startTime } },
-              { endTime: { gt: data.startTime } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { lt: endTime } },
-              { endTime: { gte: endTime } },
-            ],
-          },
-        ],
-      },
-    });
-
-    if (conflictingAppointment) {
-      throw new ConflictError("Já existe um agendamento nesse horário");
+  // Valida transição de status
+  if (data?.status && data.status !== appointment.status) {
+    const allowed = ALLOWED_TRANSITIONS[appointment.status];
+    if (!allowed.includes(data.status)) {
+      throw new ValidationError(
+        `Transição de status inválida: ${appointment.status} -> ${data.status}`
+      );
     }
+  }
 
-    return prisma.appointment.update({
-      where: { id },
-      data: {
-        startTime: data.startTime,
-        endTime,
-        ...(data.status && { status: data.status }),
-      },
-    });
+  const dataFields = {
+    ...(data?.status && { status: data.status }),
+    ...(data?.customerName && { customerName: data.customerName }),
+    ...(data?.customerPhone && { customerPhone: data.customerPhone }),
+    ...(data?.customerEmail !== undefined && { customerEmail: data.customerEmail }),
+    ...(data?.notes !== undefined && { notes: data.notes }),
+  };
+
+  // Reagendamento (mudança de horário) exige checagem de conflito atômica
+  if (data?.startTime) {
+    const newStart = data.startTime;
+    const service = await getService(prisma, appointment.serviceId, tenantId);
+    const endTime = new Date(newStart.getTime() + service.durationInMinutes * 60_000);
+
+    try {
+      return await prisma.$transaction(
+        async (tx) => {
+          await assertNoConflict(tx, tenantId, newStart, endTime, id);
+          return tx.appointment.update({
+            where: { id },
+            data: {
+              startTime: newStart,
+              endTime,
+              version: { increment: 1 },
+              ...dataFields,
+            },
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+      );
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
+        throw new ConflictError("Já existe um agendamento nesse horário");
+      }
+      throw err;
+    }
   }
 
   return prisma.appointment.update({
     where: { id },
-    data: {
-      ...(data?.status && { status: data.status }),
-    },
+    data: { version: { increment: 1 }, ...dataFields },
   });
 }
 
-export async function deleteAppointment(prisma: PrismaClient, id: number, tenantId: number, userId?: number, role?: string) {
+export async function deleteAppointment(
+  prisma: PrismaClient,
+  id: number,
+  tenantId: number,
+  userId?: number,
+  role?: string
+) {
   const appointment = await getAppointment(prisma, id, tenantId, userId, role);
 
-  // CUSTOMER can only delete their own appointments
   if (role === "CUSTOMER" && appointment.userId !== userId) {
     throw new NotFoundError("Agendamento não encontrado");
   }
 
   try {
-    await prisma.appointment.delete({
-      where: { id },
-    });
+    await prisma.appointment.delete({ where: { id } });
   } catch (error: any) {
     if (error.code === "P2025") {
       throw new NotFoundError("Agendamento não encontrado");

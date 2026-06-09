@@ -5,11 +5,37 @@ import {
   AppointmentUpdateSchema,
   AppointmentParamsSchema,
   AppointmentQuerySchema,
+  AvailabilityQuerySchema,
 } from "../schemas/index.js";
 import * as appointmentService from "../services/appointments.js";
+import { getAvailableSlots } from "../services/availability.js";
 
 export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
   const zApp = app.withTypeProvider<ZodTypeProvider>();
+
+  // GET /availability - Slots disponíveis para um serviço numa data
+  zApp.get(
+    "/availability",
+    {
+      schema: {
+        tags: ["Appointments"],
+        querystring: AvailabilityQuerySchema,
+        description: "Lista horários disponíveis para um serviço numa data (YYYY-MM-DD)",
+      },
+    },
+    async (req, reply) => {
+      if (!req.auth) {
+        return reply.status(401).send({ message: "Não autenticado" });
+      }
+      const slots = await getAvailableSlots(
+        app.prisma,
+        req.auth.tenantId,
+        req.query.serviceId,
+        req.query.date
+      );
+      return reply.send(slots);
+    }
+  );
 
   // GET /appointments - List appointments with optional filters
   zApp.get(
@@ -26,10 +52,17 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const query = req.query;
-      const filters: { serviceId?: number; status?: string } = {};
+      const filters: {
+        serviceId?: number;
+        status?: NonNullable<typeof query.status>;
+        from?: Date;
+        to?: Date;
+      } = {};
       if (query.serviceId !== undefined) filters.serviceId = query.serviceId;
       if (query.status !== undefined) filters.status = query.status;
-    
+      if (query.from !== undefined) filters.from = new Date(query.from);
+      if (query.to !== undefined) filters.to = new Date(query.to);
+
       const appointments = await appointmentService.listAppointments(
         app.prisma,
         req.auth.tenantId,
@@ -88,6 +121,8 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
         {
           customerName: body.customerName,
           customerPhone: body.customerPhone,
+          customerEmail: body.customerEmail,
+          notes: body.notes,
           serviceId: body.serviceId,
           startTime: new Date(body.startTime),
         }
@@ -113,10 +148,14 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
 
       const params = req.params;
       const body = req.body;
-    
-      const updateData: any = {};
+
+      const updateData: Parameters<typeof appointmentService.updateAppointment>[5] = {};
       if (body.status) updateData.status = body.status;
       if (body.startTime) updateData.startTime = new Date(body.startTime);
+      if (body.customerName !== undefined) updateData.customerName = body.customerName;
+      if (body.customerPhone !== undefined) updateData.customerPhone = body.customerPhone;
+      if (body.customerEmail !== undefined) updateData.customerEmail = body.customerEmail;
+      if (body.notes !== undefined) updateData.notes = body.notes;
 
       const appointment = await appointmentService.updateAppointment(
         app.prisma,

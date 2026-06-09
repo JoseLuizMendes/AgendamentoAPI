@@ -15,6 +15,8 @@ import { servicesRoutes } from "./routes/services.js";
 import { hoursRoutes } from "./routes/hours.js";
 import { overridesRoutes } from "./routes/overrides.js";
 import { appointmentsRoutes } from "./routes/appointments.js";
+import { settingsRoutes } from "./routes/settings.js";
+import { publicRoutes } from "./routes/public.js";
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from "fastify-type-provider-zod";
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -143,6 +145,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(hoursRoutes);
   await app.register(overridesRoutes);
   await app.register(appointmentsRoutes);
+  await app.register(settingsRoutes);
+  await app.register(publicRoutes);
 
   return app;
 }

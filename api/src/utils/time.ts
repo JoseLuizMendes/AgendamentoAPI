@@ -1,3 +1,5 @@
+import { DateTime } from "luxon";
+
 export function parseTimeToMinutes(time: string): number {
   if (!/^\d{2}:\d{2}$/.test(time)) {
     throw new Error("Formato de horário inválido. Use HH:MM");
@@ -53,4 +55,27 @@ export function addMinutes(date: Date, minutes: number): Date {
 
 export function toIso(date: Date): string {
   return date.toISOString();
+}
+
+/**
+ * Converte data (YYYY-MM-DD) + hora (HH:MM) interpretadas no fuso informado
+ * para um instante real em UTC (Date). Usa luxon para lidar com DST corretamente.
+ */
+export function zonedTimeToUtc(date: string, time: string, timezone: string): Date {
+  assertIsoDate(date);
+  parseTimeToMinutes(time);
+
+  const dt = DateTime.fromISO(`${date}T${time}`, { zone: timezone });
+  if (!dt.isValid) {
+    throw new Error(`Data/hora inválida no fuso ${timezone}: ${date}T${time}`);
+  }
+  return dt.toUTC().toJSDate();
+}
+
+/** Dia da semana (0=Domingo..6=Sábado) da data YYYY-MM-DD interpretada no fuso informado. */
+export function dayOfWeekInZone(date: string, timezone: string): number {
+  assertIsoDate(date);
+  const dt = DateTime.fromISO(date, { zone: timezone });
+  // luxon weekday: 1=Segunda..7=Domingo -> 0=Domingo..6=Sábado
+  return dt.weekday % 7;
 }
