@@ -5,6 +5,20 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { setToken } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { AlertCircle, CalendarClock } from "lucide-react";
 
 type LoginResponse = {
   user: { id: number; email: string; name?: string | null; role: string; tenantId: number };
@@ -43,53 +57,78 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl p-6">
-      <h1 className="text-2xl font-semibold">Login</h1>
-
-      <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-        <div>
-          <label className="block text-sm font-medium">Tenant Slug</label>
-          <input
-            className="mt-1 w-full rounded border p-2"
-            value={tenantSlug}
-            onChange={(e) => setTenantSlug(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Email</label>
-          <input className="mt-1 w-full rounded border p-2" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Senha</label>
-          <input
-            type="password"
-            className="mt-1 w-full rounded border p-2"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-
-        {error ? <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div> : null}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded bg-black px-4 py-2 text-white disabled:opacity-60"
-        >
-          {loading ? "Entrando..." : "Entrar"}
-        </button>
-      </form>
-
-      <div className="mt-6 flex gap-4 text-sm">
-        <Link className="underline" href="/signup">
-          Primeiro acesso → signup
-        </Link>
-        <Link className="underline" href="/dashboard">
-          Ir pro dashboard
-        </Link>
+    <div className="relative flex min-h-svh flex-col items-center justify-center bg-muted/30 p-6">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
       </div>
+
+      <div className="mb-8 flex items-center gap-2 text-foreground">
+        <CalendarClock className="size-6" />
+        <span className="font-display text-3xl leading-none">Agendamento</span>
+      </div>
+
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="font-display text-2xl tracking-wide">Entrar</CardTitle>
+          <CardDescription>Acesse o painel do seu estabelecimento.</CardDescription>
+        </CardHeader>
+
+        <form onSubmit={onSubmit}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tenantSlug">Slug do estabelecimento</Label>
+              <Input
+                id="tenantSlug"
+                value={tenantSlug}
+                onChange={(e) => setTenantSlug(e.target.value)}
+                placeholder="ex: minha-clinica"
+                autoComplete="organization"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+
+            {error ? (
+              <Alert variant="destructive">
+                <AlertCircle className="size-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+          </CardContent>
+
+          <CardFooter className="mt-6 flex-col gap-4">
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Entrando..." : "Entrar"}
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              Primeiro acesso?{" "}
+              <Link href="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
+                Criar conta
+              </Link>
+            </p>
+          </CardFooter>
+        </form>
+      </Card>
     </div>
   );
 }

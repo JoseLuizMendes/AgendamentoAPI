@@ -4,6 +4,21 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { clearToken, getToken } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { CalendarClock, LogOut, Info } from "lucide-react";
 
 type MeResponse = {
   id: number;
@@ -47,6 +62,12 @@ type Appointment = {
 function formatJson(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
+
+function formatBRL(cents: number): string {
+  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+const DAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 export default function DashboardPage() {
   const token = useMemo(() => getToken(), []);
@@ -208,114 +229,272 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <div className="flex items-start justify-between  gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Dashboard de teste</h1>
-          <p className="mt-1 text-sm text-zinc-600">
-            Tudo que você criar usando o JWT fica no seu tenant; agendamentos ficam com `userId` do token.
-          </p>
+    <div className="min-h-svh bg-muted/20">
+      {/* Top bar */}
+      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-3">
+          <div className="flex items-center gap-2">
+            <CalendarClock className="size-5" />
+            <span className="font-display text-2xl leading-none">Agendamento</span>
+            {me ? (
+              <Badge variant="secondary" className="ml-2 font-mono text-xs">
+                {me.tenant.slug}
+              </Badge>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2">
+            {me ? (
+              <span className="hidden text-sm text-muted-foreground sm:inline">
+                {me.email} · {me.role}
+              </span>
+            ) : null}
+            <ThemeToggle />
+            <Button variant="outline" size="sm" onClick={logout}>
+              <LogOut className="size-4" /> Sair
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-3 text-sm">
-          <Link className="underline" href="/signup">
-            signup
-          </Link>
-          <Link className="underline" href="/login">
-            login
-          </Link>
-          <button className="underline" onClick={logout}>
-            limpar token
-          </button>
-        </div>
-      </div>
+      </header>
 
-      {!token ? (
-        <div className="mt-6 rounded border bg-yellow-50 p-4 text-sm">
-          Sem JWT no navegador. Faça <Link className="underline" href="/signup">signup</Link> ou{" "}
-          <Link className="underline" href="/login">login</Link>.
-        </div>
-      ) : null}
+      <main className="mx-auto max-w-5xl px-6 py-8">
+        {!token ? (
+          <Alert>
+            <Info className="size-4" />
+            <AlertTitle>Sem sessão ativa</AlertTitle>
+            <AlertDescription>
+              Faça{" "}
+              <Link href="/signup" className="font-medium underline underline-offset-4">
+                signup
+              </Link>{" "}
+              ou{" "}
+              <Link href="/login" className="font-medium underline underline-offset-4">
+                login
+              </Link>{" "}
+              para usar o painel.
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
-      {error ? <div className="mt-6 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div> : null}
+        {error ? (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2 ">
-        <section className="rounded border p-4">
-          <h2 className="text-lg font-semibold">Sessão</h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button className="rounded bg-black px-3 py-2 text-sm text-white" onClick={loadMe}>
-              /auth/me
-            </button>
-          </div>
-          <div className="mt-3 text-sm text-zinc-700">
-            <div><span className="font-medium">User:</span> {me ? `${me.email} (${me.role})` : "-"}</div>
-            <div><span className="font-medium">Tenant:</span> {me ? `${me.tenant.slug}` : "-"}</div>
-          </div>
-        </section>
+        <Tabs defaultValue="services" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="session">Sessão</TabsTrigger>
+            <TabsTrigger value="services">Serviços</TabsTrigger>
+            <TabsTrigger value="hours">Horários</TabsTrigger>
+            <TabsTrigger value="appointments">Agendamentos</TabsTrigger>
+          </TabsList>
 
-        <section className="rounded border p-4">
-          <h2 className="text-lg font-semibold">Services</h2>
-          <div className="mt-3 grid gap-2">
-            <input className="rounded border p-2 text-sm" placeholder="name" value={serviceName} onChange={(e) => setServiceName(e.target.value)} />
-            <input className="rounded border p-2 text-sm" type="number" placeholder="priceInCents" value={servicePrice} onChange={(e) => setServicePrice(Number(e.target.value))} />
-            <input className="rounded border p-2 text-sm" type="number" placeholder="durationInMinutes" value={serviceDuration} onChange={(e) => setServiceDuration(Number(e.target.value))} />
-            <div className="flex gap-2">
-              <button className="rounded bg-black px-3 py-2 text-sm text-white" onClick={createService}>
-                POST /services
-              </button>
-              <button className="rounded border px-3 py-2 text-sm" onClick={loadServices}>
-                GET /services
-              </button>
+          {/* Sessão */}
+          <TabsContent value="session">
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-display text-xl tracking-wide">Sessão</CardTitle>
+                <CardDescription>Usuário autenticado e estabelecimento atual.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button variant="secondary" onClick={loadMe}>
+                  Atualizar /auth/me
+                </Button>
+                <div className="grid gap-1 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Usuário:</span>{" "}
+                    {me ? `${me.email} (${me.role})` : "-"}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Estabelecimento:</span>{" "}
+                    {me ? `${me.tenant.name} (${me.tenant.slug})` : "-"}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Serviços */}
+          <TabsContent value="services">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-xl tracking-wide">Novo serviço</CardTitle>
+                  <CardDescription>Procedimento com preço e duração.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="svc-name">Nome</Label>
+                    <Input id="svc-name" value={serviceName} onChange={(e) => setServiceName(e.target.value)} placeholder="Ex: Limpeza" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="svc-price">Preço (centavos)</Label>
+                      <Input id="svc-price" type="number" value={servicePrice} onChange={(e) => setServicePrice(Number(e.target.value))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="svc-dur">Duração (min)</Label>
+                      <Input id="svc-dur" type="number" value={serviceDuration} onChange={(e) => setServiceDuration(Number(e.target.value))} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={createService}>Criar</Button>
+                    <Button variant="outline" onClick={loadServices}>Recarregar</Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-xl tracking-wide">
+                    Serviços <Badge variant="secondary" className="ml-1">{services.length}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {services.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum serviço ainda.</p>
+                  ) : (
+                    services.map((s) => (
+                      <div key={s.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
+                        <span className="font-medium">{s.name}</span>
+                        <span className="text-muted-foreground">{formatBRL(s.priceInCents)} · {s.durationInMinutes}min</span>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
             </div>
-          </div>
-          <div className="mt-3 text-xs text-zinc-600">Total: {services.length}</div>
-        </section>
+          </TabsContent>
 
-        <section className="rounded border p-4">
-          <h2 className="text-lg font-semibold">Business Hours</h2>
-          <div className="mt-3 grid gap-2">
-            <input className="rounded border p-2 text-sm" type="number" min={0} max={6} value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))} />
-            <input className="rounded border p-2 text-sm" value={openTime} onChange={(e) => setOpenTime(e.target.value)} placeholder="openTime (HH:mm)" />
-            <input className="rounded border p-2 text-sm" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} placeholder="closeTime (HH:mm)" />
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={isOff} onChange={(e) => setIsOff(e.target.checked)} />
-              isOff
-            </label>
-            <div className="flex gap-2">
-              <button className="rounded bg-black px-3 py-2 text-sm text-white" onClick={createHours}>
-                POST /hours
-              </button>
-              <button className="rounded border px-3 py-2 text-sm" onClick={loadHours}>
-                GET /hours
-              </button>
+          {/* Horários */}
+          <TabsContent value="hours">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-xl tracking-wide">Horário de funcionamento</CardTitle>
+                  <CardDescription>0 = Domingo … 6 = Sábado.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dow">Dia da semana</Label>
+                    <Input id="dow" type="number" min={0} max={6} value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="open">Abre</Label>
+                      <Input id="open" value={openTime} onChange={(e) => setOpenTime(e.target.value)} placeholder="09:00" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="close">Fecha</Label>
+                      <Input id="close" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} placeholder="18:00" />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={isOff} onChange={(e) => setIsOff(e.target.checked)} className="size-4 accent-primary" />
+                    Fechado neste dia
+                  </label>
+                  <div className="flex gap-2">
+                    <Button onClick={createHours}>Salvar</Button>
+                    <Button variant="outline" onClick={loadHours}>Recarregar</Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-xl tracking-wide">
+                    Horários <Badge variant="secondary" className="ml-1">{hours.length}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {hours.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum horário configurado.</p>
+                  ) : (
+                    [...hours].sort((a, b) => a.dayOfWeek - b.dayOfWeek).map((h) => (
+                      <div key={h.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
+                        <span className="font-medium">{DAYS[h.dayOfWeek] ?? h.dayOfWeek}</span>
+                        <span className="text-muted-foreground">
+                          {h.isOff ? "Fechado" : `${h.openTime} – ${h.closeTime}`}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
             </div>
-          </div>
-          <div className="mt-3 text-xs text-zinc-600">Total: {hours.length}</div>
-        </section>
+          </TabsContent>
 
-        <section className="rounded border p-4">
-          <h2 className="text-lg font-semibold">Appointments</h2>
-          <div className="mt-3 grid gap-2">
-            <input className="rounded border p-2 text-sm" placeholder="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-            <input className="rounded border p-2 text-sm" placeholder="customerPhone" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
-            <input className="rounded border p-2 text-sm" type="number" value={appointmentServiceId} onChange={(e) => setAppointmentServiceId(Number(e.target.value))} placeholder="serviceId" />
-            <input className="rounded border p-2 text-sm" type="datetime-local" value={startTimeLocal} onChange={(e) => setStartTimeLocal(e.target.value)} />
-            <div className="flex gap-2">
-              <button className="rounded bg-black px-3 py-2 text-sm text-white" onClick={createAppointment}>
-                POST /appointments
-              </button>
-              <button className="rounded border px-3 py-2 text-sm" onClick={loadAppointments}>
-                GET /appointments
-              </button>
+          {/* Agendamentos */}
+          <TabsContent value="appointments">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-xl tracking-wide">Novo agendamento</CardTitle>
+                  <CardDescription>Reserva para um cliente.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cust-name">Cliente</Label>
+                    <Input id="cust-name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cust-phone">Telefone</Label>
+                    <Input id="cust-phone" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="appt-svc">Serviço (id)</Label>
+                      <Input id="appt-svc" type="number" value={appointmentServiceId} onChange={(e) => setAppointmentServiceId(Number(e.target.value))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="appt-start">Início</Label>
+                      <Input id="appt-start" type="datetime-local" value={startTimeLocal} onChange={(e) => setStartTimeLocal(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={createAppointment}>Agendar</Button>
+                    <Button variant="outline" onClick={loadAppointments}>Recarregar</Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-xl tracking-wide">
+                    Agendamentos <Badge variant="secondary" className="ml-1">{appointments.length}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {appointments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum agendamento.</p>
+                  ) : (
+                    appointments.map((a) => (
+                      <div key={a.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
+                        <span className="font-medium">{a.customerName}</span>
+                        <span className="text-muted-foreground">
+                          {new Date(a.startTime).toLocaleString("pt-BR")} · {a.status}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
             </div>
-          </div>
-          <div className="mt-3 text-xs text-zinc-600">Total: {appointments.length}</div>
-        </section>
-      </div>
+          </TabsContent>
+        </Tabs>
 
-      <section className="mt-6 rounded border p-4 ">
-        <h2 className="text-lg font-semibold">Última resposta (raw)</h2>
-        <pre className="mt-3 max-h-[420px] overflow-auto rounded border bg-black p-3 text-xs">{raw || "(vazio)"}</pre>
-      </section>
+        {/* Resposta raw */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="font-display text-xl tracking-wide">Última resposta (raw)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="max-h-[420px] overflow-auto rounded-md border bg-muted p-3 font-mono text-xs">
+              {raw || "(vazio)"}
+            </pre>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }
