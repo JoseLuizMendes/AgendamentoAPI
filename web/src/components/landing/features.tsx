@@ -55,12 +55,15 @@ function NicheVisual() {
       {[0, 1, 2, 3, 4, 5].map((i) => {
         const angle = i * 60 * (Math.PI / 180);
         const r = 50;
+        // Arredondado para evitar diferença de serialização de float entre servidor/cliente (hidratação)
+        const cx = Number((100 + Math.cos(angle) * r).toFixed(2));
+        const cy = Number((80 + Math.sin(angle) * r).toFixed(2));
         return (
           <g key={i}>
-            <line x1="100" y1="80" x2={100 + Math.cos(angle) * r} y2={80 + Math.sin(angle) * r} stroke="currentColor" strokeWidth="1" opacity="0.3">
+            <line x1="100" y1="80" x2={cx} y2={cy} stroke="currentColor" strokeWidth="1" opacity="0.3">
               <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2s" begin={`${i * 0.3}s`} repeatCount="indefinite" />
             </line>
-            <circle cx={100 + Math.cos(angle) * r} cy={80 + Math.sin(angle) * r} r="6" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx={cx} cy={cy} r="6" fill="none" stroke="currentColor" strokeWidth="2">
               <animate attributeName="r" values="6;8;6" dur="2s" begin={`${i * 0.3}s`} repeatCount="indefinite" />
             </circle>
           </g>
