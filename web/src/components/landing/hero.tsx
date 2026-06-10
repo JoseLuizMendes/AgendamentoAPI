@@ -15,6 +15,10 @@ const stats = [
   { value: "Multi-nicho", label: "saúde, beleza, serviços" },
 ];
 
+// Uma "metade" larga o bastante para exceder a viewport (evita vão à direita).
+// O track renderiza duas metades idênticas e a animação desloca -50% (loop contínuo).
+const marqueeHalf = [...stats, ...stats, ...stats];
+
 export function Hero() {
   const [isVisible, setIsVisible] = useState(false);
   const [wordIndex, setWordIndex] = useState(0);
@@ -55,7 +59,7 @@ export function Hero() {
         <div className="mb-12">
           <h1 className={`font-display text-[clamp(3rem,12vw,10rem)] leading-[0.9] tracking-wide transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}>
             <span className="block">Gerencie a agenda</span>
-            <span className="block">
+            <span className="block pt-4">
               do seu{" "}
               <span className="relative inline-block">
                 <span key={wordIndex} className="inline-flex">
@@ -92,17 +96,17 @@ export function Hero() {
         </div>
       </div>
 
-      {/* Marquee de estatísticas */}
-      <div className={`absolute bottom-16 left-0 right-0 transition-all delay-500 duration-700 ${isVisible ? "opacity-100" : "opacity-0"}`}>
-        <div className="marquee flex gap-16 whitespace-nowrap">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="flex gap-16">
-              {stats.map((stat) => (
-                <div key={`${stat.value}-${i}`} className="flex items-baseline gap-4">
-                  <span className="font-display text-4xl lg:text-5xl">{stat.value}</span>
-                  <span className="text-sm text-muted-foreground">{stat.label}</span>
-                </div>
-              ))}
+      {/* Marquee de estatísticas — loop contínuo (2 metades idênticas, -50%) */}
+      <div className={`absolute bottom-16 left-0 right-0 overflow-hidden transition-all delay-500 duration-700 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+        <div className="marquee flex w-max">
+          {[...marqueeHalf, ...marqueeHalf].map((stat, i) => (
+            <div
+              key={i}
+              aria-hidden={i >= marqueeHalf.length}
+              className="mr-12 flex shrink-0 flex-col lg:mr-16"
+            >
+              <span className="font-display text-4xl leading-none lg:text-5xl">{stat.value}</span>
+              <span className="mt-1 whitespace-nowrap text-sm text-muted-foreground">{stat.label}</span>
             </div>
           ))}
         </div>
