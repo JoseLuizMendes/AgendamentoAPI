@@ -47,7 +47,7 @@ export default function LoginPage() {
       });
 
       setToken(res.token);
-      router.push("/dashboard");
+      router.push(`/${tenantSlug}`);
     } catch (err) {
       if (err instanceof ApiError) setError(err.message);
       else setError("Erro inesperado");
