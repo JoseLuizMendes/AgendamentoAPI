@@ -4,6 +4,18 @@ import { getService } from "./services.js";
 import { assertNoConflict } from "./appointment-conflict.js";
 import { assertStatusTransition } from "./appointment-status.js";
 
+const MAX_DURATION_MS = 24 * 60 * 60_000;
+
+/** Valida o intervalo de um agendamento (usado quando a duração é custom). */
+function assertValidRange(startTime: Date, endTime: Date): void {
+  if (endTime.getTime() <= startTime.getTime()) {
+    throw new ValidationError("Horário de término deve ser após o início");
+  }
+  if (endTime.getTime() - startTime.getTime() > MAX_DURATION_MS) {
+    throw new ValidationError("Duração máxima de 24h excedida");
+  }
+}
+
 export async function listAppointments(
   prisma: PrismaClient,
   tenantId: number,
@@ -75,15 +87,18 @@ export async function createAppointment(
     notes?: string | undefined;
     serviceId: number;
     startTime: Date;
+    endTime?: Date | undefined;
   }
 ) {
   if (!data) {
     throw new ValidationError("Dados do agendamento não fornecidos");
   }
 
-  // Valida serviço e calcula término
+  // Valida serviço e calcula término (duração custom tem prioridade sobre a do serviço)
   const service = await getService(prisma, data.serviceId, tenantId);
-  const endTime = new Date(data.startTime.getTime() + service.durationInMinutes * 60_000);
+  const endTime =
+    data.endTime ?? new Date(data.startTime.getTime() + service.durationInMinutes * 60_000);
+  assertValidRange(data.startTime, endTime);
 
   // Transação serializável: re-checa conflito e cria atomicamente (anti corrida de duplo-agendamento)
   try {
@@ -125,6 +140,7 @@ export async function updateAppointment(
   data?: {
     status?: AppointmentStatus | undefined;
     startTime?: Date | undefined;
+    endTime?: Date | undefined;
     customerName?: string | undefined;
     customerPhone?: string | undefined;
     customerEmail?: string | undefined;
@@ -138,7 +154,7 @@ export async function updateAppointment(
     if (appointment.userId !== userId) {
       throw new NotFoundError("Agendamento não encontrado");
     }
-    if (data?.startTime) {
+    if (data?.startTime || data?.endTime) {
       throw new ValidationError("Clientes não podem reagendar. Cancele e crie um novo agendamento.");
     }
     if (data?.status && data.status !== "CANCELED") {
@@ -159,21 +175,24 @@ export async function updateAppointment(
     ...(data?.notes !== undefined && { notes: data.notes }),
   };
 
-  // Reagendamento (mudança de horário) exige checagem de conflito atômica
-  if (data?.startTime) {
-    const newStart = data.startTime;
-    const service = await getService(prisma, appointment.serviceId, tenantId);
-    const endTime = new Date(newStart.getTime() + service.durationInMinutes * 60_000);
+  // Mudança de horário (mover/redimensionar) exige checagem de conflito atômica.
+  // - startTime sem endTime  => mover preservando a duração atual
+  // - endTime                => duração custom (redimensionar), mantendo o início se não vier
+  if (data?.startTime || data?.endTime) {
+    const newStart = data.startTime ?? appointment.startTime;
+    const currentDuration = appointment.endTime.getTime() - appointment.startTime.getTime();
+    const newEnd = data.endTime ?? new Date(newStart.getTime() + currentDuration);
+    assertValidRange(newStart, newEnd);
 
     try {
       return await prisma.$transaction(
         async (tx) => {
-          await assertNoConflict(tx, tenantId, newStart, endTime, id);
+          await assertNoConflict(tx, tenantId, newStart, newEnd, id);
           return tx.appointment.update({
             where: { id },
             data: {
               startTime: newStart,
-              endTime,
+              endTime: newEnd,
               version: { increment: 1 },
               ...dataFields,
             },

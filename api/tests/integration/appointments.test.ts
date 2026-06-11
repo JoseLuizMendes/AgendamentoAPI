@@ -161,4 +161,136 @@ describe.skipIf(!hasDb)("integration/appointments", () => {
     expect(list).toHaveLength(1);
     expect(list[0].customerName).toBe("Dia15");
   });
+
+  it("cria com duração custom (endTime) sobrepondo a do serviço", async () => {
+    const limpeza = await createService("Limpeza", 30);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/appointments",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        customerName: "Custom",
+        customerPhone: "551234567890",
+        serviceId: limpeza,
+        startTime: "2026-06-15T14:00:00.000Z",
+        endTime: "2026-06-15T15:30:00.000Z", // 90min, ignora os 30min do serviço
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    expect(new Date(created.json().endTime).toISOString()).toBe("2026-06-15T15:30:00.000Z");
+  });
+
+  it("sem endTime usa a duração do serviço (fallback)", async () => {
+    const limpeza = await createService("Limpeza", 30);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/appointments",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        customerName: "Fallback",
+        customerPhone: "551234567890",
+        serviceId: limpeza,
+        startTime: "2026-06-15T14:00:00.000Z",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    expect(new Date(created.json().endTime).toISOString()).toBe("2026-06-15T14:30:00.000Z");
+  });
+
+  it("rejeita endTime menor ou igual ao início (400)", async () => {
+    const limpeza = await createService("Limpeza", 30);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/appointments",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        customerName: "Invalido",
+        customerPhone: "551234567890",
+        serviceId: limpeza,
+        startTime: "2026-06-15T14:00:00.000Z",
+        endTime: "2026-06-15T13:30:00.000Z",
+      },
+    });
+    expect(created.statusCode).toBe(400);
+  });
+
+  it("mover (PATCH startTime) preserva a duração custom", async () => {
+    const limpeza = await createService("Limpeza", 30);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/appointments",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        customerName: "Mover",
+        customerPhone: "551234567890",
+        serviceId: limpeza,
+        startTime: "2026-06-15T14:00:00.000Z",
+        endTime: "2026-06-15T15:30:00.000Z", // 90min
+      },
+    });
+    const id = created.json().id as number;
+
+    const moved = await app.inject({
+      method: "PATCH",
+      url: `/appointments/${id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { startTime: "2026-06-15T16:00:00.000Z" },
+    });
+    expect(moved.statusCode).toBe(200);
+    // 90min preservados => fim 17:30
+    expect(new Date(moved.json().endTime).toISOString()).toBe("2026-06-15T17:30:00.000Z");
+  });
+
+  it("redimensionar (PATCH endTime) muda o término e checa conflito (409)", async () => {
+    const limpeza = await createService("Limpeza", 30);
+
+    const a = await app.inject({
+      method: "POST",
+      url: "/appointments",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        customerName: "A",
+        customerPhone: "551234567890",
+        serviceId: limpeza,
+        startTime: "2026-06-15T14:00:00.000Z", // 14:00–14:30
+      },
+    });
+    const idA = a.json().id as number;
+
+    const b = await app.inject({
+      method: "POST",
+      url: "/appointments",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        customerName: "B",
+        customerPhone: "558888888888",
+        serviceId: limpeza,
+        startTime: "2026-06-15T14:30:00.000Z", // 14:30–15:00 (sem overlap)
+      },
+    });
+    expect(b.statusCode).toBe(201);
+
+    // Redimensiona A para 14:45 -> invade B -> 409
+    const resize = await app.inject({
+      method: "PATCH",
+      url: `/appointments/${idA}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { endTime: "2026-06-15T14:45:00.000Z" },
+    });
+    expect(resize.statusCode).toBe(409);
+
+    // Redimensiona A para 14:40 (sem invadir) -> ok
+    const ok = await app.inject({
+      method: "PATCH",
+      url: `/appointments/${idA}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { endTime: "2026-06-15T14:25:00.000Z" },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(new Date(ok.json().endTime).toISOString()).toBe("2026-06-15T14:25:00.000Z");
+  });
 });

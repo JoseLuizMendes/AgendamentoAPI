@@ -9,7 +9,7 @@ import { clearToken } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useTenant } from "./tenant-context";
 
 const NAV = [
@@ -109,6 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent side="left" className="w-72 p-0">
                 <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
+                <SheetDescription className="sr-only">Navegação do workspace</SheetDescription>
                 <SidebarInner onNavigate={() => setMobileOpen(false)} />
               </SheetContent>
             </Sheet>

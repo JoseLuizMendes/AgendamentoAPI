@@ -124,6 +124,7 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
           notes: body.notes,
           serviceId: body.serviceId,
           startTime: new Date(body.startTime),
+          endTime: body.endTime ? new Date(body.endTime) : undefined,
         }
       );
       return reply.status(201).send(appointment);
@@ -149,6 +150,7 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
       const updateData: Parameters<typeof appointmentService.updateAppointment>[5] = {};
       if (body.status) updateData.status = body.status;
       if (body.startTime) updateData.startTime = new Date(body.startTime);
+      if (body.endTime) updateData.endTime = new Date(body.endTime);
       if (body.customerName !== undefined) updateData.customerName = body.customerName;
       if (body.customerPhone !== undefined) updateData.customerPhone = body.customerPhone;
       if (body.customerEmail !== undefined) updateData.customerEmail = body.customerEmail;

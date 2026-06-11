@@ -63,11 +63,15 @@ export const AppointmentCreateSchema = z.object({
   notes: z.string().max(2000).optional(),
   serviceId: z.number().int().positive(),
   startTime: z.string().datetime(),
+  // Duração livre (opcional): fim custom; ausente => derivado da duração do serviço.
+  endTime: z.string().datetime().optional(),
 });
 
 export const AppointmentUpdateSchema = z.object({
   status: AppointmentStatusEnum.optional(),
   startTime: z.string().datetime().optional(),
+  // Redimensionar/reagendar com duração livre.
+  endTime: z.string().datetime().optional(),
   customerName: z.string().min(1).max(200).optional(),
   customerPhone: z.string().min(6).max(30).optional(),
   customerEmail: z.string().email().optional(),
