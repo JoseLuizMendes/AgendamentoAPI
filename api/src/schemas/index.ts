@@ -226,6 +226,52 @@ export const SettingsResponseSchema = z.object({
   maxAdvanceDays: z.number(),
 });
 
+// Reports / Dashboard
+export const ReportQuerySchema = z.object({
+  from: z.string().datetime(),
+  to: z.string().datetime(),
+  granularity: z.enum(["day", "week", "month"]).default("day"),
+});
+
+const ReportScalarsSchema = z.object({
+  revenueRealizedInCents: z.number(),
+  revenueExpectedInCents: z.number(),
+  appointmentsTotal: z.number(),
+  completed: z.number(),
+  canceled: z.number(),
+  noShow: z.number(),
+  clients: z.number(),
+  newClients: z.number(),
+  ticketMedioInCents: z.number(),
+  occupancyRate: z.number(),
+  noShowRate: z.number(),
+  cancelRate: z.number(),
+});
+
+export const ReportSummaryResponseSchema = z.object({
+  range: z.object({ from: z.string(), to: z.string(), granularity: z.string() }),
+  current: ReportScalarsSchema,
+  previous: ReportScalarsSchema,
+  series: z.array(
+    z.object({
+      key: z.string(),
+      label: z.string(),
+      revenueInCents: z.number(),
+      appointments: z.number(),
+    }),
+  ),
+  topServices: z.array(
+    z.object({
+      serviceId: z.number(),
+      name: z.string(),
+      count: z.number(),
+      revenueInCents: z.number(),
+    }),
+  ),
+  byWeekday: z.array(z.number()),
+  byHour: z.array(z.number()),
+});
+
 export type SignupInput = z.infer<typeof SignupSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type UserCreate = z.infer<typeof UserCreateSchema>;
