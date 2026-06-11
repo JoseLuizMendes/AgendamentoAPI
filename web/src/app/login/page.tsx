@@ -3,22 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
+import { ArrowRight } from "lucide-react";
+
 import { apiRequest, ApiError } from "@/lib/api";
 import { setToken } from "@/lib/auth";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { PasswordInput } from "@/components/auth/password-input";
+import { Eyebrow } from "@/components/brand/eyebrow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { AlertCircle, CalendarClock } from "lucide-react";
 
 type LoginResponse = {
   user: { id: number; email: string; name?: string | null; role: string; tenantId: number };
@@ -30,14 +25,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [tenantSlug, setTenantSlug] = useState("");
-
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
     try {
       const res = await apiRequest<LoginResponse>("/auth/login", {
@@ -47,88 +39,81 @@ export default function LoginPage() {
       });
 
       setToken(res.token);
+      toast.success("Bem-vindo de volta!");
       router.push(`/${tenantSlug}`);
     } catch (err) {
-      if (err instanceof ApiError) setError(err.message);
-      else setError("Erro inesperado");
+      toast.error(err instanceof ApiError ? err.message : "Erro inesperado ao entrar");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="relative flex min-h-svh flex-col items-center justify-center bg-muted/30 p-6">
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
-      </div>
+    <AuthShell
+      headline={
+        <>
+          Bem-vindo
+          <br />
+          de volta.
+        </>
+      }
+    >
+      <Eyebrow className="mb-5">Entrar</Eyebrow>
+      <h1 className="font-display text-4xl tracking-wide">Acesse seu painel</h1>
+      <p className="text-muted-foreground mt-2">Gerencie a agenda do seu estabelecimento.</p>
 
-      <div className="mb-8 flex items-center gap-2 text-foreground">
-        <CalendarClock className="size-6" />
-        <span className="font-display text-3xl leading-none">Agendamento</span>
-      </div>
+      <form onSubmit={onSubmit} className="mt-8 space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="tenantSlug">Estabelecimento</Label>
+          <Input
+            id="tenantSlug"
+            className="h-11"
+            value={tenantSlug}
+            onChange={(e) => setTenantSlug(e.target.value)}
+            placeholder="ex: minha-clinica"
+            autoComplete="organization"
+            required
+          />
+        </div>
 
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="font-display text-2xl tracking-wide">Entrar</CardTitle>
-          <CardDescription>Acesse o painel do seu estabelecimento.</CardDescription>
-        </CardHeader>
+        <div className="space-y-2">
+          <Label htmlFor="email">E-mail</Label>
+          <Input
+            id="email"
+            type="email"
+            className="h-11"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="voce@exemplo.com"
+            autoComplete="email"
+            required
+          />
+        </div>
 
-        <form onSubmit={onSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="tenantSlug">Slug do estabelecimento</Label>
-              <Input
-                id="tenantSlug"
-                value={tenantSlug}
-                onChange={(e) => setTenantSlug(e.target.value)}
-                placeholder="ex: minha-clinica"
-                autoComplete="organization"
-              />
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Senha</Label>
+          <PasswordInput
+            id="password"
+            className="h-11"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-              />
-            </div>
+        <Button type="submit" size="lg" className="group h-12 w-full rounded-full text-base" disabled={loading}>
+          {loading ? "Entrando..." : "Entrar"}
+          {!loading && <ArrowRight className="ml-1 size-4 transition-transform group-hover:translate-x-1" />}
+        </Button>
+      </form>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
-
-            {error ? (
-              <Alert variant="destructive">
-                <AlertCircle className="size-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
-          </CardContent>
-
-          <CardFooter className="mt-6 flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
-            </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              Primeiro acesso?{" "}
-              <Link href="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
-                Criar conta
-              </Link>
-            </p>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+      <p className="text-muted-foreground mt-8 text-center text-sm">
+        Primeiro acesso?{" "}
+        <Link href="/signup" className="text-foreground font-medium underline-offset-4 hover:underline">
+          Criar conta
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

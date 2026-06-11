@@ -63,11 +63,15 @@ export const AppointmentCreateSchema = z.object({
   notes: z.string().max(2000).optional(),
   serviceId: z.number().int().positive(),
   startTime: z.string().datetime(),
+  // Duração livre (opcional): fim custom; ausente => derivado da duração do serviço.
+  endTime: z.string().datetime().optional(),
 });
 
 export const AppointmentUpdateSchema = z.object({
   status: AppointmentStatusEnum.optional(),
   startTime: z.string().datetime().optional(),
+  // Redimensionar/reagendar com duração livre.
+  endTime: z.string().datetime().optional(),
   customerName: z.string().min(1).max(200).optional(),
   customerPhone: z.string().min(6).max(30).optional(),
   customerEmail: z.string().email().optional(),
@@ -220,6 +224,52 @@ export const SettingsResponseSchema = z.object({
   slotIntervalMinutes: z.number(),
   minLeadTimeMinutes: z.number(),
   maxAdvanceDays: z.number(),
+});
+
+// Reports / Dashboard
+export const ReportQuerySchema = z.object({
+  from: z.string().datetime(),
+  to: z.string().datetime(),
+  granularity: z.enum(["day", "week", "month"]).default("day"),
+});
+
+const ReportScalarsSchema = z.object({
+  revenueRealizedInCents: z.number(),
+  revenueExpectedInCents: z.number(),
+  appointmentsTotal: z.number(),
+  completed: z.number(),
+  canceled: z.number(),
+  noShow: z.number(),
+  clients: z.number(),
+  newClients: z.number(),
+  ticketMedioInCents: z.number(),
+  occupancyRate: z.number(),
+  noShowRate: z.number(),
+  cancelRate: z.number(),
+});
+
+export const ReportSummaryResponseSchema = z.object({
+  range: z.object({ from: z.string(), to: z.string(), granularity: z.string() }),
+  current: ReportScalarsSchema,
+  previous: ReportScalarsSchema,
+  series: z.array(
+    z.object({
+      key: z.string(),
+      label: z.string(),
+      revenueInCents: z.number(),
+      appointments: z.number(),
+    }),
+  ),
+  topServices: z.array(
+    z.object({
+      serviceId: z.number(),
+      name: z.string(),
+      count: z.number(),
+      revenueInCents: z.number(),
+    }),
+  ),
+  byWeekday: z.array(z.number()),
+  byHour: z.array(z.number()),
 });
 
 export type SignupInput = z.infer<typeof SignupSchema>;

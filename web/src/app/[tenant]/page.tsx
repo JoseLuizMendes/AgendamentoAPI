@@ -1,5 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
+<<<<<<< HEAD
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiRequest, ApiError } from "@/lib/api";
@@ -223,7 +224,7 @@ export default function WorkspacePage() {
           <div className="flex items-center gap-2">
             <CalendarClock className="size-5" />
             <span className="font-display text-2xl leading-none">{me?.tenant.name ?? "Workspace"}</span>
-            <Badge variant="secondary" className="ml-2 font-mono text-xs">{tenantSlug}</Badge>
+            {/*<Badge variant="secondary" className="ml-2 font-mono text-xs">{tenantSlug}</Badge>*/}
           </div>
           <div className="flex items-center gap-2">
             {me ? <span className="hidden text-sm text-muted-foreground sm:inline">{me.email} · {me.role}</span> : null}
@@ -422,4 +423,10 @@ export default function WorkspacePage() {
       </main>
     </div>
   );
+=======
+/** Índice do workspace → redireciona para a Agenda. */
+export default async function TenantIndex({ params }: { params: Promise<{ tenant: string }> }) {
+  const { tenant } = await params;
+  redirect(`/${tenant}/agenda`);
+>>>>>>> c2bd88e4c01c60edec3cf3d09a0517e64ebb5883
 }
