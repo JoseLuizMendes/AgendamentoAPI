@@ -246,6 +246,7 @@ const ReportScalarsSchema = z.object({
   occupancyRate: z.number(),
   noShowRate: z.number(),
   cancelRate: z.number(),
+  byStatus: z.record(z.string(), z.number()),
 });
 
 export const ReportSummaryResponseSchema = z.object({

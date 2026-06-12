@@ -106,6 +106,15 @@ describe.skipIf(!hasDb)("integration/reports", () => {
     expect(body.current.newClients).toBe(3); // P2 é recorrente (apareceu em maio)
     expect(body.current.ticketMedioInCents).toBe(12500);
 
+    // Distribuição por status (alimenta o funil do dashboard)
+    expect(body.current.byStatus).toEqual({
+      SCHEDULED: 1, // a2
+      CONFIRMED: 1, // a3
+      COMPLETED: 2, // a1 + a6
+      NO_SHOW: 1, // a5
+      CANCELED: 1, // a4
+    });
+
     // Comparativo (maio): 1 concluído de 5000
     expect(body.previous.revenueRealizedInCents).toBe(5000);
 

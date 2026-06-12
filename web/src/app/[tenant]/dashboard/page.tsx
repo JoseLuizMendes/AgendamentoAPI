@@ -3,16 +3,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Activity, CalendarDays, DollarSign, Receipt, UserX, Users } from "lucide-react";
+import { Activity, CalendarDays, Download, DollarSign, Receipt, UserX, Users } from "lucide-react";
 
 import { apiRequest, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Eyebrow } from "@/components/brand/eyebrow";
-import { formatBRL } from "@/components/tenant/shared";
+import { EmptyState, formatBRL } from "@/components/tenant/shared";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KpiCard } from "@/components/tenant/dashboard/kpi-card";
 import { CountBars, HighlightBars, RevenueArea } from "@/components/tenant/dashboard/charts";
+import { StatusFunnel } from "@/components/tenant/dashboard/status-funnel";
+import { downloadSummaryCsv } from "@/components/tenant/dashboard/export";
 import { deltaPct, PERIODS, periodRange, type PeriodKey } from "@/components/tenant/dashboard/periods";
 import type { ReportSummary } from "@/components/tenant/dashboard/types";
 
@@ -59,6 +62,12 @@ export default function DashboardPage() {
   const c = summary?.current;
   const p = summary?.previous;
 
+  function exportCsv() {
+    if (!summary) return;
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadSummaryCsv(summary, `relatorio-${periodKey}-${stamp}.csv`);
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -66,21 +75,27 @@ export default function DashboardPage() {
           <Eyebrow className="mb-3">Indicadores</Eyebrow>
           <h1 className="font-display text-3xl tracking-wide lg:text-4xl">Performance</h1>
         </div>
-        <div className="bg-muted/60 inline-flex flex-wrap gap-1 rounded-full border p-1">
-          {PERIODS.map((per) => (
-            <button
-              key={per.key}
-              onClick={() => setPeriodKey(per.key)}
-              className={cn(
-                "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-                periodKey === per.key
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {per.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="bg-muted/60 inline-flex flex-wrap gap-1 rounded-full border p-1">
+            {PERIODS.map((per) => (
+              <button
+                key={per.key}
+                onClick={() => setPeriodKey(per.key)}
+                aria-pressed={periodKey === per.key}
+                className={cn(
+                  "focus-visible:ring-ring rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2",
+                  periodKey === per.key
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {per.label}
+              </button>
+            ))}
+          </div>
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={!summary}>
+            <Download className="size-4" /> <span className="hidden sm:inline">Exportar CSV</span>
+          </Button>
         </div>
       </div>
 
@@ -104,6 +119,12 @@ export default function DashboardPage() {
             <KpiCard icon={UserX} label="No-show" value={`${Math.round(c.noShowRate * 100)}%`} delta={deltaPct(c.noShowRate, p.noShowRate)} invertGood />
           </div>
 
+          {c.appointmentsTotal === 0 ? (
+            <EmptyState icon={CalendarDays}>
+              Sem agendamentos neste período. Os gráficos aparecem assim que houver movimento.
+            </EmptyState>
+          ) : (
+          <>
           <Card>
             <CardHeader>
               <CardTitle className="font-display text-xl tracking-wide">Receita no período</CardTitle>
@@ -155,24 +176,35 @@ export default function DashboardPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
+                <CardTitle className="font-display text-xl tracking-wide">Funil de status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StatusFunnel byStatus={c.byStatus} />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
                 <CardTitle className="font-display text-xl tracking-wide">Movimento por dia</CardTitle>
               </CardHeader>
               <CardContent>
                 <HighlightBars data={weekdayData} peakIndex={argmax(summary.byWeekday)} />
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-display text-xl tracking-wide">Movimento por hora</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <HighlightBars
-                  data={hourData}
-                  peakIndex={hourData.findIndex((d) => d.h === argmax(summary.byHour))}
-                />
-              </CardContent>
-            </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display text-xl tracking-wide">Movimento por hora</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <HighlightBars
+                data={hourData}
+                peakIndex={hourData.findIndex((d) => d.h === argmax(summary.byHour))}
+              />
+            </CardContent>
+          </Card>
+          </>
+          )}
         </>
       )}
     </div>

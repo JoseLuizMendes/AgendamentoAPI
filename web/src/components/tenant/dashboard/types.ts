@@ -13,6 +13,7 @@ export type ReportScalars = {
   occupancyRate: number;
   noShowRate: number;
   cancelRate: number;
+  byStatus: Record<string, number>;
 };
 
 export type ReportSummary = {

@@ -19,6 +19,7 @@ type BusinessHour = { dayOfWeek: number; openTime: string; closeTime: string; is
 const REALIZED = "COMPLETED";
 const OCCUPYING = new Set(["SCHEDULED", "CONFIRMED", "COMPLETED"]);
 const EXPECTED = new Set(["SCHEDULED", "CONFIRMED", "COMPLETED"]);
+const ALL_STATUSES = ["SCHEDULED", "CONFIRMED", "COMPLETED", "NO_SHOW", "CANCELED"] as const;
 
 export type Scalars = {
   revenueRealizedInCents: number;
@@ -33,6 +34,7 @@ export type Scalars = {
   occupancyRate: number;
   noShowRate: number;
   cancelRate: number;
+  byStatus: Record<string, number>;
 };
 
 /** Minutos disponíveis no período, somando o expediente de cada dia (no fuso da tenant). */
@@ -68,6 +70,7 @@ function computeScalars(
   let bookedMinutes = 0;
   const phones = new Set<string>();
   const newPhones = new Set<string>();
+  const byStatus: Record<string, number> = Object.fromEntries(ALL_STATUSES.map((s) => [s, 0]));
 
   for (const a of list) {
     const price = a.service?.priceInCents ?? 0;
@@ -81,6 +84,7 @@ function computeScalars(
     if (OCCUPYING.has(a.status)) {
       bookedMinutes += Math.max(0, (a.endTime.getTime() - a.startTime.getTime()) / 60_000);
     }
+    byStatus[a.status] = (byStatus[a.status] ?? 0) + 1;
     phones.add(a.customerPhone);
     if (!knownBefore.has(a.customerPhone)) newPhones.add(a.customerPhone);
   }
@@ -101,6 +105,7 @@ function computeScalars(
     occupancyRate: available > 0 ? Math.min(1, bookedMinutes / available) : 0,
     noShowRate: appointmentsTotal > 0 ? noShow / appointmentsTotal : 0,
     cancelRate: appointmentsTotal > 0 ? canceled / appointmentsTotal : 0,
+    byStatus,
   };
 }
 
