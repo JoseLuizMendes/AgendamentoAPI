@@ -63,6 +63,9 @@ describe.skipIf(!hasDb)("integration/settings", () => {
     expect(s.allowCustomerBooking).toBe(false);
     expect(s.timezone).toBe("America/Sao_Paulo");
     expect(s.slotIntervalMinutes).toBe(15);
+    // Defaults dos limiares de triagem
+    expect(s.statusPromptAfterStartMin).toBe(0);
+    expect(s.overdueAfterEndMin).toBe(60);
   });
 
   it("OWNER atualiza configurações via PATCH", async () => {
@@ -75,6 +78,18 @@ describe.skipIf(!hasDb)("integration/settings", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().allowCustomerBooking).toBe(true);
     expect(res.json().slotIntervalMinutes).toBe(30);
+  });
+
+  it("OWNER atualiza os limiares de triagem", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/settings",
+      headers: { authorization: `Bearer ${ownerToken}` },
+      payload: { statusPromptAfterStartMin: 15, overdueAfterEndMin: 90 },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().statusPromptAfterStartMin).toBe(15);
+    expect(res.json().overdueAfterEndMin).toBe(90);
   });
 
   it("STAFF não pode alterar configurações (403)", async () => {

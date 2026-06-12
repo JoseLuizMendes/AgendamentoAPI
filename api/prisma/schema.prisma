@@ -28,6 +28,9 @@ model Tenant {
   slotIntervalMinutes    Int                     @default(15)
   minLeadTimeMinutes     Int                     @default(0)
   maxAdvanceDays         Int                     @default(90)
+  // Triagem de status: minutos após o início p/ "aguardando definição" e após o fim p/ "passado".
+  statusPromptAfterStartMin Int                  @default(0)
+  overdueAfterEndMin     Int                     @default(60)
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   users                  User[]

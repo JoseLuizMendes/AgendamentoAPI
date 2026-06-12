@@ -5,15 +5,27 @@ import { useParams, useRouter } from "next/navigation";
 
 import { apiRequest, ApiError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import type { BusinessHours, MeResponse, Service } from "./types";
+import type { BusinessHours, MeResponse, Service, TenantSettings } from "./types";
+
+const DEFAULT_SETTINGS: TenantSettings = {
+  allowCustomerBooking: false,
+  timezone: "America/Sao_Paulo",
+  slotIntervalMinutes: 15,
+  minLeadTimeMinutes: 0,
+  maxAdvanceDays: 90,
+  statusPromptAfterStartMin: 0,
+  overdueAfterEndMin: 60,
+};
 
 type TenantContextValue = {
   me: MeResponse;
   slug: string;
   services: Service[];
   hours: BusinessHours[];
+  settings: TenantSettings;
   reloadServices: () => Promise<void>;
   reloadHours: () => Promise<void>;
+  reloadSettings: () => Promise<void>;
 };
 
 const TenantContext = createContext<TenantContextValue | null>(null);
@@ -39,6 +51,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [hours, setHours] = useState<BusinessHours[]>([]);
+  const [settings, setSettings] = useState<TenantSettings>(DEFAULT_SETTINGS);
 
   const reloadServices = useCallback(async () => {
     try {
@@ -51,6 +64,14 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const reloadHours = useCallback(async () => {
     try {
       setHours(await apiRequest<BusinessHours[]>("/hours"));
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) router.replace("/login");
+    }
+  }, [router]);
+
+  const reloadSettings = useCallback(async () => {
+    try {
+      setSettings(await apiRequest<TenantSettings>("/settings"));
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) router.replace("/login");
     }
@@ -77,6 +98,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       }
       void reloadServices();
       void reloadHours();
+      void reloadSettings();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -90,7 +112,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <TenantContext.Provider value={{ me, slug, services, hours, reloadServices, reloadHours }}>
+    <TenantContext.Provider
+      value={{ me, slug, services, hours, settings, reloadServices, reloadHours, reloadSettings }}
+    >
       {children}
     </TenantContext.Provider>
   );

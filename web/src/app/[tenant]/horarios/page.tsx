@@ -7,6 +7,7 @@ import { Clock, Plus, RefreshCw } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { useTenant } from "@/components/tenant/tenant-context";
 import { DAYS, EmptyState } from "@/components/tenant/shared";
+import type { TenantSettings } from "@/components/tenant/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function HorariosPage() {
-  const { hours, reloadHours } = useTenant();
+  const { hours, reloadHours, settings, reloadSettings } = useTenant();
   const [dayOfWeek, setDayOfWeek] = useState(1);
   const [openTime, setOpenTime] = useState("09:00");
   const [closeTime, setCloseTime] = useState("18:00");
@@ -38,7 +39,7 @@ export default function HorariosPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl p-6 lg:p-8">
+    <div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-8">
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
         <Card className="h-fit">
           <CardHeader>
@@ -107,6 +108,88 @@ export default function HorariosPage() {
           </CardContent>
         </Card>
       </div>
+
+      <TriageSettingsCard
+        key={`${settings.statusPromptAfterStartMin}-${settings.overdueAfterEndMin}`}
+        initial={settings}
+        onSaved={reloadSettings}
+      />
     </div>
+  );
+}
+
+/**
+ * Limiares da triagem de status (o dono define os tempos). Keyed pelos valores
+ * iniciais → remonta com os valores corretos quando /settings carrega.
+ */
+function TriageSettingsCard({ initial, onSaved }: { initial: TenantSettings; onSaved: () => Promise<void> }) {
+  const [promptMin, setPromptMin] = useState(String(initial.statusPromptAfterStartMin));
+  const [overdueMin, setOverdueMin] = useState(String(initial.overdueAfterEndMin));
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const p = Number(promptMin);
+    const o = Number(overdueMin);
+    if (!Number.isInteger(p) || p < 0 || p > 1440) return toast.error("Minutos após o início inválidos (0–1440)");
+    if (!Number.isInteger(o) || o < 0 || o > 1440) return toast.error("Minutos após o fim inválidos (0–1440)");
+    setSaving(true);
+    try {
+      await apiRequest("/settings", {
+        method: "PATCH",
+        body: { statusPromptAfterStartMin: p, overdueAfterEndMin: o },
+      });
+      toast.success("Triagem atualizada");
+      await onSaved();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-display text-xl tracking-wide">Triagem de status</CardTitle>
+        <CardDescription>
+          Quando cobrar a definição do status de um atendimento que já aconteceu.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="prompt-min">Aguardando após o início (min)</Label>
+            <Input
+              id="prompt-min"
+              type="number"
+              min={0}
+              max={1440}
+              value={promptMin}
+              onChange={(e) => setPromptMin(e.target.value)}
+            />
+            <p className="text-muted-foreground text-xs">
+              Passado esse tempo do início, o agendamento pede definição de status.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="overdue-min">Vira “passado” após o fim (min)</Label>
+            <Input
+              id="overdue-min"
+              type="number"
+              min={0}
+              max={1440}
+              value={overdueMin}
+              onChange={(e) => setOverdueMin(e.target.value)}
+            />
+            <p className="text-muted-foreground text-xs">
+              Sem resolução depois disso, o agendamento é sinalizado como atrasado.
+            </p>
+          </div>
+        </div>
+        <Button onClick={save} disabled={saving} className="w-full sm:w-auto">
+          {saving ? "Salvando..." : "Salvar triagem"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

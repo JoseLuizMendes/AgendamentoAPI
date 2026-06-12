@@ -26,6 +26,19 @@ export type BusinessHours = {
   tenantId: number;
 };
 
+// Espelha GET /settings.
+export type TenantSettings = {
+  allowCustomerBooking: boolean;
+  timezone: string;
+  slotIntervalMinutes: number;
+  minLeadTimeMinutes: number;
+  maxAdvanceDays: number;
+  /** Min após o início p/ entrar em "aguardando definição". */
+  statusPromptAfterStartMin: number;
+  /** Min após o fim p/ virar "passado" sem resolução. */
+  overdueAfterEndMin: number;
+};
+
 export type Appointment = {
   id: number;
   customerName: string;

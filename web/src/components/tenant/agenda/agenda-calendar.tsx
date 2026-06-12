@@ -23,20 +23,24 @@ import { useTenant } from "@/components/tenant/tenant-context";
 import { STATUS_META } from "@/components/tenant/shared";
 import type { Appointment, Service } from "@/components/tenant/types";
 import { serviceColor, statusColor, type ColorMode } from "./colors";
+import { phaseOf, PHASE_CLASS } from "./phase";
 import { AppointmentCreateDrawer } from "./appointment-create-drawer";
 import { AppointmentDetailDrawer } from "./appointment-detail-drawer";
+import { TriagePanel } from "./triage-panel";
 
 const ACTIVE = new Set(["SCHEDULED", "CONFIRMED"]);
 const STATUS_ORDER = ["SCHEDULED", "CONFIRMED", "COMPLETED", "NO_SHOW", "CANCELED"] as const;
 const COLOR_MODE_KEY = "agenda:colorMode";
 
 export function AgendaCalendar() {
-  const { services, hours } = useTenant();
+  const { services, hours, settings } = useTenant();
   const rangeRef = useRef<{ start: string; end: string } | null>(null);
 
   const [mounted, setMounted] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const [range, setRange] = useState<{ start: number; end: number } | null>(null);
   // Preferência de cor persiste entre sessões (init lazy — este subtree só
   // renderiza no client, depois do gate de auth do TenantProvider).
   const [colorMode, setColorMode] = useState<ColorMode>(() =>
@@ -49,6 +53,12 @@ export function AgendaCalendar() {
 
   // FullCalendar acessa o DOM — renderiza só após montar (evita SSR/hydration).
   useEffect(() => setMounted(true), []);
+
+  // Avança o "agora" a cada minuto para as fases progredirem em tempo real.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   function changeColorMode(mode: ColorMode) {
     setColorMode(mode);
@@ -79,6 +89,7 @@ export function AgendaCalendar() {
     const start = arg.start.toISOString();
     const end = arg.end.toISOString();
     rangeRef.current = { start, end };
+    setRange({ start: arg.start.getTime(), end: arg.end.getTime() });
     void fetchRange(start, end);
   }
 
@@ -96,29 +107,45 @@ export function AgendaCalendar() {
     ? `${[...openTimes.map((h) => h.closeTime)].sort().at(-1)}:00`
     : "20:00:00";
 
-  const events: EventInput[] = useMemo(
-    () =>
-      appointments.map((a) => {
-        const muted = a.status === "CANCELED" || a.status === "NO_SHOW";
-        const st = statusColor(a.status);
-        const svc = serviceColor(a.serviceId);
-        // A borda lateral sempre reflete o status (leitura rápida do estágio).
-        // O corpo do evento segue o modo escolhido (serviço x status).
-        const body = colorMode === "status" ? st : muted ? null : svc;
-        return {
-          id: String(a.id),
-          start: a.startTime,
-          end: a.endTime,
-          editable: ACTIVE.has(a.status),
-          backgroundColor: body ? body.bg : "var(--muted)",
-          borderColor: st.border,
-          textColor: body ? body.text : "var(--muted-foreground)",
-          classNames: muted ? ["fc-appt-muted"] : [],
-          extendedProps: { appt: a },
-        };
-      }),
-    [appointments, colorMode],
-  );
+  const events: EventInput[] = useMemo(() => {
+    const list: EventInput[] = appointments.map((a) => {
+      const muted = a.status === "CANCELED" || a.status === "NO_SHOW";
+      const st = statusColor(a.status);
+      const svc = serviceColor(a.serviceId);
+      // A borda lateral sempre reflete o status (leitura rápida do estágio).
+      // O corpo do evento segue o modo escolhido (serviço x status).
+      const body = colorMode === "status" ? st : muted ? null : svc;
+      const cls: string[] = [];
+      if (muted) cls.push("fc-appt-muted");
+      const phaseCls = PHASE_CLASS[phaseOf(a, now, settings)];
+      if (phaseCls) cls.push(phaseCls);
+      return {
+        id: String(a.id),
+        start: a.startTime,
+        end: a.endTime,
+        editable: ACTIVE.has(a.status),
+        backgroundColor: body ? body.bg : "var(--muted)",
+        borderColor: st.border,
+        textColor: body ? body.text : "var(--muted-foreground)",
+        classNames: cls,
+        extendedProps: { appt: a },
+      };
+    });
+
+    // Sombreia o passado visível como indisponível (não dá pra agendar no passado).
+    if (range) {
+      const pastEnd = Math.min(now, range.end);
+      if (pastEnd > range.start) {
+        list.push({
+          start: new Date(range.start).toISOString(),
+          end: new Date(pastEnd).toISOString(),
+          display: "background",
+          classNames: ["fc-past-bg"],
+        });
+      }
+    }
+    return list;
+  }, [appointments, colorMode, now, settings, range]);
 
   async function patchTimes(id: number, startISO: string, endISO: string, revert: () => void) {
     try {
@@ -166,7 +193,9 @@ export function AgendaCalendar() {
     const a = arg.event.extendedProps.appt as Appointment | undefined;
     // Eventos "fantasma" (mirror do arraste de seleção/movimentação) não têm
     // agendamento por trás — renderiza só o horário, sem acessar dados do appt.
+    // Eventos de fundo (sombra do passado) não renderizam conteúdo.
     if (!a) {
+      if (arg.event.display === "background") return null;
       return <div className="px-1 py-0.5 text-[11px] font-medium leading-tight">{arg.timeText}</div>;
     }
     const service = a.service ?? services.find((s) => s.id === a.serviceId);
@@ -183,7 +212,10 @@ export function AgendaCalendar() {
     <div className="flex h-full flex-col">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <ColorLegend mode={colorMode} services={services} />
-        <ColorModeToggle mode={colorMode} onChange={changeColorMode} />
+        <div className="flex items-center gap-2">
+          <TriagePanel onResolved={reload} />
+          <ColorModeToggle mode={colorMode} onChange={changeColorMode} />
+        </div>
       </div>
 
       <div className="relative min-h-0 flex-1">
@@ -206,7 +238,6 @@ export function AgendaCalendar() {
           customButtons={{ novo: { text: "+ Novo", click: openCreateDefault } }}
           buttonText={{ today: "Hoje", week: "Semana", day: "Dia", month: "Mês" }}
           allDaySlot={false}
-          nowIndicator
           slotDuration="00:15:00"
           snapDuration="00:15:00"
           slotLabelFormat={{ hour: "2-digit", minute: "2-digit", hour12: false, omitZeroMinute: false, meridiem: false }}
@@ -218,6 +249,7 @@ export function AgendaCalendar() {
           height="100%"
           selectable
           selectMirror
+          selectAllow={(span) => span.start.getTime() >= Date.now()}
           editable
           eventResizableFromStart
           events={events}

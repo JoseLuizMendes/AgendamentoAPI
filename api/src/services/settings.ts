@@ -8,20 +8,36 @@ export type TenantSettings = {
   slotIntervalMinutes: number;
   minLeadTimeMinutes: number;
   maxAdvanceDays: number;
+  statusPromptAfterStartMin: number;
+  overdueAfterEndMin: number;
 };
 
-export async function getSettings(prisma: PrismaClient, tenantId: number): Promise<TenantSettings> {
-  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
-  if (!tenant) {
-    throw new NotFoundError("Tenant não encontrado");
-  }
+function toSettings(tenant: {
+  allowCustomerBooking: boolean;
+  timezone: string;
+  slotIntervalMinutes: number;
+  minLeadTimeMinutes: number;
+  maxAdvanceDays: number;
+  statusPromptAfterStartMin: number;
+  overdueAfterEndMin: number;
+}): TenantSettings {
   return {
     allowCustomerBooking: tenant.allowCustomerBooking,
     timezone: tenant.timezone,
     slotIntervalMinutes: tenant.slotIntervalMinutes,
     minLeadTimeMinutes: tenant.minLeadTimeMinutes,
     maxAdvanceDays: tenant.maxAdvanceDays,
+    statusPromptAfterStartMin: tenant.statusPromptAfterStartMin,
+    overdueAfterEndMin: tenant.overdueAfterEndMin,
   };
+}
+
+export async function getSettings(prisma: PrismaClient, tenantId: number): Promise<TenantSettings> {
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  if (!tenant) {
+    throw new NotFoundError("Tenant não encontrado");
+  }
+  return toSettings(tenant);
 }
 
 export async function updateSettings(
@@ -41,14 +57,10 @@ export async function updateSettings(
       ...(data.slotIntervalMinutes !== undefined && { slotIntervalMinutes: data.slotIntervalMinutes }),
       ...(data.minLeadTimeMinutes !== undefined && { minLeadTimeMinutes: data.minLeadTimeMinutes }),
       ...(data.maxAdvanceDays !== undefined && { maxAdvanceDays: data.maxAdvanceDays }),
+      ...(data.statusPromptAfterStartMin !== undefined && { statusPromptAfterStartMin: data.statusPromptAfterStartMin }),
+      ...(data.overdueAfterEndMin !== undefined && { overdueAfterEndMin: data.overdueAfterEndMin }),
     },
   });
 
-  return {
-    allowCustomerBooking: tenant.allowCustomerBooking,
-    timezone: tenant.timezone,
-    slotIntervalMinutes: tenant.slotIntervalMinutes,
-    minLeadTimeMinutes: tenant.minLeadTimeMinutes,
-    maxAdvanceDays: tenant.maxAdvanceDays,
-  };
+  return toSettings(tenant);
 }

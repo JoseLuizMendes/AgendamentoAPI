@@ -154,6 +154,9 @@ export const SettingsUpdateSchema = z.object({
   slotIntervalMinutes: z.number().int().min(5).max(240).optional(),
   minLeadTimeMinutes: z.number().int().min(0).max(60 * 24 * 30).optional(),
   maxAdvanceDays: z.number().int().min(1).max(730).optional(),
+  // Triagem de status (minutos). 0..1440.
+  statusPromptAfterStartMin: z.number().int().min(0).max(1440).optional(),
+  overdueAfterEndMin: z.number().int().min(0).max(1440).optional(),
 });
 
 // Public (self-booking) schemas
@@ -225,6 +228,8 @@ export const SettingsResponseSchema = z.object({
   slotIntervalMinutes: z.number(),
   minLeadTimeMinutes: z.number(),
   maxAdvanceDays: z.number(),
+  statusPromptAfterStartMin: z.number(),
+  overdueAfterEndMin: z.number(),
 });
 
 // Reports / Dashboard

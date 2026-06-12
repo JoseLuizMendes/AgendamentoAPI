@@ -216,7 +216,6 @@
   --fc-page-bg-color: var(--background);
   --fc-neutral-bg-color: var(--muted);
   --fc-today-bg-color: color-mix(in oklch, var(--primary) 7%, transparent);
-  --fc-now-indicator-color: var(--destructive);
   --fc-non-business-color: color-mix(in oklch, var(--muted) 55%, transparent);
   --fc-event-border-color: transparent;
   font-family: var(--font-sans);
@@ -294,15 +293,35 @@
 }
 .fc .fc-event.fc-appt-muted {
   text-decoration: line-through;
-  opacity: 0.6;
 }
 .fc .fc-timegrid-event {
   box-shadow: none;
 }
-.fc .fc-timegrid-now-indicator-line {
-  border-width: 2px;
-}
 .fc-theme-standard td,
 .fc-theme-standard th {
   border-color: var(--border);
+}
+
+/* ===== Ciclo de vida / triagem do agendamento ============================ */
+/* Resolvido (concluído/faltou/cancelado): desbotado, "já passou". */
+.fc .fc-event.fc-appt-resolved {
+  opacity: 0.45;
+}
+/* Aguardando definição de status: anel âmbar de atenção. */
+.fc .fc-event.fc-appt-awaiting {
+  box-shadow: 0 0 0 1px var(--background), 0 0 0 3px #f59e0b;
+}
+/* Passou do prazo sem resolução: desbotado + anel vermelho. */
+.fc .fc-event.fc-appt-overdue {
+  opacity: 0.7;
+  box-shadow: 0 0 0 1px var(--background), 0 0 0 3px #ef4444;
+}
+/* Em andamento (quando há janela antes de "aguardando"): acento da marca. */
+.fc .fc-event.fc-appt-now {
+  box-shadow: 0 0 0 1px var(--background), 0 0 0 3px var(--primary);
+}
+/* Passado indisponível: sombreamento do bloco de fundo. */
+.fc .fc-bg-event.fc-past-bg {
+  background: var(--muted-foreground);
+  opacity: 0.08;
 }
