@@ -139,6 +139,7 @@ export async function updateAppointment(
   role?: string,
   data?: {
     status?: AppointmentStatus | undefined;
+    serviceId?: number | undefined;
     startTime?: Date | undefined;
     endTime?: Date | undefined;
     customerName?: string | undefined;
@@ -149,6 +150,11 @@ export async function updateAppointment(
 ) {
   const appointment = await getAppointment(prisma, id, tenantId, userId, role);
 
+  // Troca de serviço: valida que o novo serviço existe e é da tenant.
+  if (data?.serviceId) {
+    await getService(prisma, data.serviceId, tenantId);
+  }
+
   // Regras para CUSTOMER: só pode cancelar o próprio agendamento, não reagendar/editar dados
   if (role === "CUSTOMER") {
     if (appointment.userId !== userId) {
@@ -156,6 +162,9 @@ export async function updateAppointment(
     }
     if (data?.startTime || data?.endTime) {
       throw new ValidationError("Clientes não podem reagendar. Cancele e crie um novo agendamento.");
+    }
+    if (data?.serviceId) {
+      throw new ValidationError("Clientes não podem trocar o serviço. Cancele e crie um novo agendamento.");
     }
     if (data?.status && data.status !== "CANCELED") {
       throw new ValidationError("Clientes só podem cancelar agendamentos.");
@@ -169,6 +178,7 @@ export async function updateAppointment(
 
   const dataFields = {
     ...(data?.status && { status: data.status }),
+    ...(data?.serviceId && { serviceId: data.serviceId }),
     ...(data?.customerName && { customerName: data.customerName }),
     ...(data?.customerPhone && { customerPhone: data.customerPhone }),
     ...(data?.customerEmail !== undefined && { customerEmail: data.customerEmail }),

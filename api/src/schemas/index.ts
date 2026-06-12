@@ -69,6 +69,7 @@ export const AppointmentCreateSchema = z.object({
 
 export const AppointmentUpdateSchema = z.object({
   status: AppointmentStatusEnum.optional(),
+  serviceId: z.number().int().positive().optional(),
   startTime: z.string().datetime().optional(),
   // Redimensionar/reagendar com duração livre.
   endTime: z.string().datetime().optional(),

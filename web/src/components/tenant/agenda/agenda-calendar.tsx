@@ -163,7 +163,12 @@ export function AgendaCalendar() {
   }
 
   function renderEvent(arg: EventContentArg) {
-    const a = arg.event.extendedProps.appt as Appointment;
+    const a = arg.event.extendedProps.appt as Appointment | undefined;
+    // Eventos "fantasma" (mirror do arraste de seleção/movimentação) não têm
+    // agendamento por trás — renderiza só o horário, sem acessar dados do appt.
+    if (!a) {
+      return <div className="px-1 py-0.5 text-[11px] font-medium leading-tight">{arg.timeText}</div>;
+    }
     const service = a.service ?? services.find((s) => s.id === a.serviceId);
     return (
       <div className="flex flex-col overflow-hidden px-1 py-0.5 leading-tight">
@@ -204,6 +209,8 @@ export function AgendaCalendar() {
           nowIndicator
           slotDuration="00:15:00"
           snapDuration="00:15:00"
+          slotLabelFormat={{ hour: "2-digit", minute: "2-digit", hour12: false, omitZeroMinute: false, meridiem: false }}
+          eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false, meridiem: false }}
           slotMinTime={slotMinTime}
           slotMaxTime={slotMaxTime}
           businessHours={businessHours}

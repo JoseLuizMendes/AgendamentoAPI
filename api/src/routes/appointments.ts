@@ -149,6 +149,7 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
 
       const updateData: Parameters<typeof appointmentService.updateAppointment>[5] = {};
       if (body.status) updateData.status = body.status;
+      if (body.serviceId !== undefined) updateData.serviceId = body.serviceId;
       if (body.startTime) updateData.startTime = new Date(body.startTime);
       if (body.endTime) updateData.endTime = new Date(body.endTime);
       if (body.customerName !== undefined) updateData.customerName = body.customerName;
