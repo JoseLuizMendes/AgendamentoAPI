@@ -1,37 +1,39 @@
-// Paleta estável por serviço — dá o visual colorido tipo as agendas de referência.
-// A cor é determinística pelo id do serviço (mesmo serviço = mesma cor sempre).
+// Cores da agenda por tokens de design (definidos em app/globals.css, bloco
+// `@theme static`). Zero hex aqui — só referências var(...), resolvidas pelo
+// browser nas cores inline do FullCalendar e nos pontos do dashboard/legenda.
 
+// Paleta estável por serviço — mesma cor sempre para o mesmo id.
 const PALETTE = [
-  { bg: "#2563eb", border: "#1d4ed8" }, // azul
-  { bg: "#059669", border: "#047857" }, // esmeralda
-  { bg: "#7c3aed", border: "#6d28d9" }, // violeta
-  { bg: "#d97706", border: "#b45309" }, // âmbar
-  { bg: "#db2777", border: "#be185d" }, // rosa
-  { bg: "#0891b2", border: "#0e7490" }, // ciano
-  { bg: "#ea580c", border: "#c2410c" }, // laranja
-  { bg: "#0d9488", border: "#0f766e" }, // teal
+  { bg: "var(--color-service-1)", border: "var(--color-service-1-bd)" },
+  { bg: "var(--color-service-2)", border: "var(--color-service-2-bd)" },
+  { bg: "var(--color-service-3)", border: "var(--color-service-3-bd)" },
+  { bg: "var(--color-service-4)", border: "var(--color-service-4-bd)" },
+  { bg: "var(--color-service-5)", border: "var(--color-service-5-bd)" },
+  { bg: "var(--color-service-6)", border: "var(--color-service-6-bd)" },
+  { bg: "var(--color-service-7)", border: "var(--color-service-7-bd)" },
+  { bg: "var(--color-service-8)", border: "var(--color-service-8-bd)" },
 ];
 
 export type EventColor = { bg: string; border: string; text: string };
 
 export function serviceColor(serviceId: number): EventColor {
   const c = PALETTE[serviceId % PALETTE.length] ?? PALETTE[0]!;
-  return { bg: c.bg, border: c.border, text: "#ffffff" };
+  return { bg: c.bg, border: c.border, text: "var(--color-on-event)" };
 }
 
 // Cor por status — usada no modo "status" e sempre na borda lateral do evento,
 // para dar leitura imediata do estágio (espelha a semântica do StatusPill).
 const STATUS_PALETTE: Record<string, { bg: string; border: string }> = {
-  SCHEDULED: { bg: "#3b82f6", border: "#1d4ed8" }, // azul — agendado
-  CONFIRMED: { bg: "#10b981", border: "#047857" }, // esmeralda — confirmado
-  COMPLETED: { bg: "#64748b", border: "#334155" }, // slate — concluído
-  NO_SHOW: { bg: "#f59e0b", border: "#b45309" }, // âmbar — faltou
-  CANCELED: { bg: "#ef4444", border: "#b91c1c" }, // vermelho — cancelado
+  SCHEDULED: { bg: "var(--color-status-scheduled)", border: "var(--color-status-scheduled-bd)" },
+  CONFIRMED: { bg: "var(--color-status-confirmed)", border: "var(--color-status-confirmed-bd)" },
+  COMPLETED: { bg: "var(--color-status-completed)", border: "var(--color-status-completed-bd)" },
+  NO_SHOW: { bg: "var(--color-status-no-show)", border: "var(--color-status-no-show-bd)" },
+  CANCELED: { bg: "var(--color-status-canceled)", border: "var(--color-status-canceled-bd)" },
 };
 
 export function statusColor(status: string): EventColor {
-  const c = STATUS_PALETTE[status] ?? { bg: "#64748b", border: "#334155" };
-  return { bg: c.bg, border: c.border, text: "#ffffff" };
+  const c = STATUS_PALETTE[status] ?? STATUS_PALETTE["COMPLETED"]!;
+  return { bg: c.bg, border: c.border, text: "var(--color-on-event)" };
 }
 
 export type ColorMode = "service" | "status";

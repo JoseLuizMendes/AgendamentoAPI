@@ -124,6 +124,41 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Cores categóricas/semânticas da agenda. `static` força a emissão dos tokens
+   mesmo sem utilitário gerado — são usadas via estilos inline (FullCalendar/
+   legenda) e nas fases. Único ponto de verdade dessas cores. */
+@theme static {
+  --color-on-event: #ffffff;
+  --color-service-1: #2563eb;
+  --color-service-1-bd: #1d4ed8;
+  --color-service-2: #059669;
+  --color-service-2-bd: #047857;
+  --color-service-3: #7c3aed;
+  --color-service-3-bd: #6d28d9;
+  --color-service-4: #d97706;
+  --color-service-4-bd: #b45309;
+  --color-service-5: #db2777;
+  --color-service-5-bd: #be185d;
+  --color-service-6: #0891b2;
+  --color-service-6-bd: #0e7490;
+  --color-service-7: #ea580c;
+  --color-service-7-bd: #c2410c;
+  --color-service-8: #0d9488;
+  --color-service-8-bd: #0f766e;
+  --color-status-scheduled: #3b82f6;
+  --color-status-scheduled-bd: #1d4ed8;
+  --color-status-confirmed: #10b981;
+  --color-status-confirmed-bd: #047857;
+  --color-status-completed: #64748b;
+  --color-status-completed-bd: #334155;
+  --color-status-no-show: #f59e0b;
+  --color-status-no-show-bd: #b45309;
+  --color-status-canceled: #ef4444;
+  --color-status-canceled-bd: #b91c1c;
+  --color-phase-awaiting: #f59e0b;
+  --color-phase-overdue: #ef4444;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -309,12 +344,12 @@
 }
 /* Aguardando definição de status: anel âmbar de atenção. */
 .fc .fc-event.fc-appt-awaiting {
-  box-shadow: 0 0 0 1px var(--background), 0 0 0 3px #f59e0b;
+  box-shadow: 0 0 0 1px var(--background), 0 0 0 3px var(--color-phase-awaiting);
 }
 /* Passou do prazo sem resolução: desbotado + anel vermelho. */
 .fc .fc-event.fc-appt-overdue {
   opacity: 0.7;
-  box-shadow: 0 0 0 1px var(--background), 0 0 0 3px #ef4444;
+  box-shadow: 0 0 0 1px var(--background), 0 0 0 3px var(--color-phase-overdue);
 }
 /* Em andamento (quando há janela antes de "aguardando"): acento da marca. */
 .fc .fc-event.fc-appt-now {
