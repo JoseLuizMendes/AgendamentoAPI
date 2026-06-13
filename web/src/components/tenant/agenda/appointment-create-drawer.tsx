@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
@@ -30,11 +30,41 @@ export function AppointmentCreateDrawer({
   services: Service[];
   onCreated: () => void;
 }) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      {/* `key` pela seleção → form fresco a cada novo arraste, sem efeito de reset. */}
+      {start && end ? (
+        <CreateContent
+          key={`${start.getTime()}-${end.getTime()}`}
+          start={start}
+          end={end}
+          services={services}
+          onCreated={onCreated}
+          onClose={() => onOpenChange(false)}
+        />
+      ) : null}
+    </Sheet>
+  );
+}
+
+function CreateContent({
+  start,
+  end,
+  services,
+  onCreated,
+  onClose,
+}: {
+  start: Date;
+  end: Date;
+  services: Service[];
+  onCreated: () => void;
+  onClose: () => void;
+}) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [serviceId, setServiceId] = useState(0);
-  const [startStr, setStartStr] = useState("");
-  const [endStr, setEndStr] = useState("");
+  const [serviceId, setServiceId] = useState(services[0]?.id ?? 0);
+  const [startStr, setStartStr] = useState(toLocalInputValue(start));
+  const [endStr, setEndStr] = useState(toLocalInputValue(end));
 
   const createMutation = useMutation({
     mutationFn: (body: {
@@ -50,17 +80,6 @@ export function AppointmentCreateDrawer({
     },
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao criar agendamento"),
   });
-
-  // Ao abrir com uma nova seleção, repõe o formulário com os horários arrastados.
-  useEffect(() => {
-    if (open && start && end) {
-      setName("");
-      setPhone("");
-      setServiceId(services[0]?.id ?? 0);
-      setStartStr(toLocalInputValue(start));
-      setEndStr(toLocalInputValue(end));
-    }
-  }, [open, start, end, services]);
 
   const startDate = startStr ? new Date(startStr) : null;
   const endDate = endStr ? new Date(endStr) : null;
@@ -82,61 +101,59 @@ export function AppointmentCreateDrawer({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full gap-0 sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle className="font-display text-xl tracking-wide">Novo agendamento</SheetTitle>
-          <SheetDescription>
-            {startDate && endDate
-              ? `${startDate.toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · ${durationLabel(startDate, endDate)}`
-              : "Reserve um horário."}
-          </SheetDescription>
-        </SheetHeader>
+    <SheetContent side="right" className="w-full gap-0 sm:max-w-md">
+      <SheetHeader>
+        <SheetTitle className="font-display text-xl tracking-wide">Novo agendamento</SheetTitle>
+        <SheetDescription>
+          {startDate && endDate
+            ? `${startDate.toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · ${durationLabel(startDate, endDate)}`
+            : "Reserve um horário."}
+        </SheetDescription>
+      </SheetHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-6">
+      <div className="flex-1 space-y-4 overflow-y-auto px-6">
+        <div className="space-y-2">
+          <Label htmlFor="c-name">Cliente</Label>
+          <Input id="c-name" className="h-11" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do cliente" autoFocus />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="c-phone">Telefone</Label>
+          <Input id="c-phone" className="h-11" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="c-svc">Serviço</Label>
+          <NativeSelect id="c-svc" className="h-11" value={serviceId} onChange={(e) => setServiceId(Number(e.target.value))} disabled={services.length === 0}>
+            {services.length === 0 ? (
+              <option value={0}>Cadastre um serviço primeiro</option>
+            ) : (
+              services.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} — {formatBRL(s.priceInCents)} · {s.durationInMinutes}min
+                </option>
+              ))
+            )}
+          </NativeSelect>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label htmlFor="c-name">Cliente</Label>
-            <Input id="c-name" className="h-11" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do cliente" autoFocus />
+            <Label htmlFor="c-start">Início</Label>
+            <Input id="c-start" type="datetime-local" className="h-11" value={startStr} onChange={(e) => setStartStr(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="c-phone">Telefone</Label>
-            <Input id="c-phone" className="h-11" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="c-svc">Serviço</Label>
-            <NativeSelect id="c-svc" className="h-11" value={serviceId} onChange={(e) => setServiceId(Number(e.target.value))} disabled={services.length === 0}>
-              {services.length === 0 ? (
-                <option value={0}>Cadastre um serviço primeiro</option>
-              ) : (
-                services.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} — {formatBRL(s.priceInCents)} · {s.durationInMinutes}min
-                  </option>
-                ))
-              )}
-            </NativeSelect>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="c-start">Início</Label>
-              <Input id="c-start" type="datetime-local" className="h-11" value={startStr} onChange={(e) => setStartStr(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="c-end">Fim</Label>
-              <Input id="c-end" type="datetime-local" className="h-11" value={endStr} onChange={(e) => setEndStr(e.target.value)} />
-            </div>
+            <Label htmlFor="c-end">Fim</Label>
+            <Input id="c-end" type="datetime-local" className="h-11" value={endStr} onChange={(e) => setEndStr(e.target.value)} />
           </div>
         </div>
+      </div>
 
-        <div className="flex gap-2 border-t p-6">
-          <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button className="flex-1" onClick={save} disabled={createMutation.isPending || services.length === 0}>
-            <Plus className="size-4" /> {createMutation.isPending ? "Salvando..." : "Agendar"}
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+      <div className="flex gap-2 border-t p-6">
+        <Button variant="outline" className="flex-1" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button className="flex-1" onClick={save} disabled={createMutation.isPending || services.length === 0}>
+          <Plus className="size-4" /> {createMutation.isPending ? "Salvando..." : "Agendar"}
+        </Button>
+      </div>
+    </SheetContent>
   );
 }

@@ -20,6 +20,7 @@ import { toast } from "sonner";
 
 import { apiRequest, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useMounted } from "@/lib/use-mounted";
 import { useTenant } from "@/components/tenant/tenant-context";
 import { STATUS_META } from "@/components/tenant/shared";
 import type { Appointment, Service } from "@/components/tenant/types";
@@ -38,7 +39,7 @@ export function AgendaCalendar() {
   const { services, hours, settings } = useTenant();
   const queryClient = useQueryClient();
 
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [now, setNow] = useState(() => Date.now());
   const [range, setRange] = useState<{
     startISO: string;
@@ -55,9 +56,6 @@ export function AgendaCalendar() {
   const [createOpen, setCreateOpen] = useState(false);
   const [detail, setDetail] = useState<Appointment | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-
-  // FullCalendar acessa o DOM — renderiza só após montar (evita SSR/hydration).
-  useEffect(() => setMounted(true), []);
 
   // Avança o "agora" a cada minuto para as fases progredirem em tempo real.
   useEffect(() => {

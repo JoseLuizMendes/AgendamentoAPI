@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useMounted } from "@/lib/use-mounted";
 import { AnimatedSphere } from "./animated-sphere";
 
 const words = ["negócio", "consultório", "salão", "estúdio", "escritório"];
@@ -20,10 +21,9 @@ const stats = [
 const marqueeHalf = [...stats, ...stats, ...stats];
 
 export function Hero() {
-  const [isVisible, setIsVisible] = useState(false);
+  const isVisible = useMounted();
   const [wordIndex, setWordIndex] = useState(0);
 
-  useEffect(() => setIsVisible(true), []);
   useEffect(() => {
     const interval = setInterval(() => setWordIndex((p) => (p + 1) % words.length), 2500);
     return () => clearInterval(interval);
