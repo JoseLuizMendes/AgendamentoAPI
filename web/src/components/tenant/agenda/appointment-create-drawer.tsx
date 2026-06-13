@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
@@ -34,7 +35,21 @@ export function AppointmentCreateDrawer({
   const [serviceId, setServiceId] = useState(0);
   const [startStr, setStartStr] = useState("");
   const [endStr, setEndStr] = useState("");
-  const [saving, setSaving] = useState(false);
+
+  const createMutation = useMutation({
+    mutationFn: (body: {
+      customerName: string;
+      customerPhone: string;
+      serviceId: number;
+      startTime: string;
+      endTime: string;
+    }) => apiRequest("/appointments", { method: "POST", body }),
+    onSuccess: () => {
+      toast.success("Agendamento criado");
+      onCreated();
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao criar agendamento"),
+  });
 
   // Ao abrir com uma nova seleção, repõe o formulário com os horários arrastados.
   useEffect(() => {
@@ -50,32 +65,20 @@ export function AppointmentCreateDrawer({
   const startDate = startStr ? new Date(startStr) : null;
   const endDate = endStr ? new Date(endStr) : null;
 
-  async function save() {
+  function save() {
     if (!name.trim()) return toast.error("Informe o cliente");
     if (phone.trim().length < 6) return toast.error("Telefone deve ter ao menos 6 dígitos");
     if (!serviceId) return toast.error("Selecione um serviço");
     if (!startStr || !endStr) return toast.error("Informe início e fim");
     if (new Date(endStr) <= new Date(startStr)) return toast.error("O fim deve ser após o início");
 
-    setSaving(true);
-    try {
-      await apiRequest("/appointments", {
-        method: "POST",
-        body: {
-          customerName: name.trim(),
-          customerPhone: phone.trim(),
-          serviceId,
-          startTime: localInputToISO(startStr),
-          endTime: localInputToISO(endStr),
-        },
-      });
-      toast.success("Agendamento criado");
-      onCreated();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao criar agendamento");
-    } finally {
-      setSaving(false);
-    }
+    createMutation.mutate({
+      customerName: name.trim(),
+      customerPhone: phone.trim(),
+      serviceId,
+      startTime: localInputToISO(startStr),
+      endTime: localInputToISO(endStr),
+    });
   }
 
   return (
@@ -129,8 +132,8 @@ export function AppointmentCreateDrawer({
           <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button className="flex-1" onClick={save} disabled={saving || services.length === 0}>
-            <Plus className="size-4" /> {saving ? "Salvando..." : "Agendar"}
+          <Button className="flex-1" onClick={save} disabled={createMutation.isPending || services.length === 0}>
+            <Plus className="size-4" /> {createMutation.isPending ? "Salvando..." : "Agendar"}
           </Button>
         </div>
       </SheetContent>

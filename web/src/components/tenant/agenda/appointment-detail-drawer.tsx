@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarClock, Pencil, Phone, Tag, Trash2 } from "lucide-react";
 
@@ -47,13 +48,44 @@ function DetailContent({
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [busy, setBusy] = useState(false);
 
   const [name, setName] = useState(a.customerName);
   const [phone, setPhone] = useState(a.customerPhone);
   const [serviceId, setServiceId] = useState(a.serviceId);
   const [startStr, setStartStr] = useState(toLocalInputValue(new Date(a.startTime)));
   const [endStr, setEndStr] = useState(toLocalInputValue(new Date(a.endTime)));
+
+  const saveMutation = useMutation({
+    mutationFn: (body: {
+      customerName: string;
+      customerPhone: string;
+      serviceId: number;
+      startTime: string;
+      endTime: string;
+    }) => apiRequest(`/appointments/${a.id}`, { method: "PATCH", body }),
+    onSuccess: () => {
+      toast.success("Agendamento atualizado");
+      onChanged();
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao atualizar"),
+  });
+  const statusMutation = useMutation({
+    mutationFn: (status: string) => apiRequest(`/appointments/${a.id}`, { method: "PATCH", body: { status } }),
+    onSuccess: () => {
+      toast.success("Status atualizado");
+      onChanged();
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao atualizar"),
+  });
+  const removeMutation = useMutation({
+    mutationFn: () => apiRequest(`/appointments/${a.id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success("Agendamento excluído");
+      onChanged();
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao excluir"),
+  });
+  const busy = saveMutation.isPending || statusMutation.isPending || removeMutation.isPending;
 
   const service = a.service ?? services.find((s) => s.id === a.serviceId);
   const start = new Date(a.startTime);
@@ -69,59 +101,29 @@ function DetailContent({
     }
   }
 
-  async function save() {
+  function save() {
     if (!name.trim()) return toast.error("Informe o cliente");
     if (phone.trim().length < 6) return toast.error("Telefone deve ter ao menos 6 dígitos");
     if (!serviceId) return toast.error("Selecione um serviço");
     if (!startStr || !endStr) return toast.error("Informe início e fim");
     if (new Date(endStr) <= new Date(startStr)) return toast.error("O fim deve ser após o início");
 
-    setBusy(true);
-    try {
-      await apiRequest(`/appointments/${a.id}`, {
-        method: "PATCH",
-        body: {
-          customerName: name.trim(),
-          customerPhone: phone.trim(),
-          serviceId,
-          startTime: localInputToISO(startStr),
-          endTime: localInputToISO(endStr),
-        },
-      });
-      toast.success("Agendamento atualizado");
-      onChanged();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao atualizar");
-    } finally {
-      setBusy(false);
-    }
+    saveMutation.mutate({
+      customerName: name.trim(),
+      customerPhone: phone.trim(),
+      serviceId,
+      startTime: localInputToISO(startStr),
+      endTime: localInputToISO(endStr),
+    });
   }
 
-  async function updateStatus(status: string) {
-    setBusy(true);
-    try {
-      await apiRequest(`/appointments/${a.id}`, { method: "PATCH", body: { status } });
-      toast.success("Status atualizado");
-      onChanged();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao atualizar");
-    } finally {
-      setBusy(false);
-    }
+  function updateStatus(status: string) {
+    statusMutation.mutate(status);
   }
 
-  async function remove() {
+  function remove() {
     if (!window.confirm("Excluir este agendamento?")) return;
-    setBusy(true);
-    try {
-      await apiRequest(`/appointments/${a.id}`, { method: "DELETE" });
-      toast.success("Agendamento excluído");
-      onChanged();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao excluir");
-    } finally {
-      setBusy(false);
-    }
+    removeMutation.mutate();
   }
 
   return (

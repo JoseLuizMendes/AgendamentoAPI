@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiRequest, ApiError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
@@ -37,73 +38,72 @@ export function useTenant(): TenantContextValue {
 }
 
 /**
- * Faz o gate de auth pós-montagem (o token só existe no client, então a 1ª
- * renderização precisa bater com o servidor → loader determinístico, sem
- * hydration mismatch), carrega /auth/me + /services + /hours e disponibiliza
- * tudo via useTenant(). Só renderiza os filhos quando `me` está pronto.
+ * Gate de auth + carga de /auth/me + /services + /hours + /settings via React Query.
+ * O token só existe no client → `enabled` parte de um init lazy (sem ler localStorage no
+ * render), e o gate mostra um loader determinístico até `me` estar pronto (sem hydration
+ * mismatch). Recarregar = invalidar a query (sem useEffect de fetch).
  */
 export function TenantProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const params = useParams();
   const slug = String(params.tenant ?? "");
+  const queryClient = useQueryClient();
 
-  const [authChecked, setAuthChecked] = useState(false);
-  const [me, setMe] = useState<MeResponse | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
-  const [hours, setHours] = useState<BusinessHours[]>([]);
-  const [settings, setSettings] = useState<TenantSettings>(DEFAULT_SETTINGS);
+  const [hasToken] = useState(() => typeof window !== "undefined" && Boolean(getToken()));
 
-  const reloadServices = useCallback(async () => {
-    try {
-      setServices(await apiRequest<Service[]>("/services"));
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) router.replace("/login");
-    }
-  }, [router]);
+  const meQuery = useQuery({
+    queryKey: ["me"],
+    queryFn: () => apiRequest<MeResponse>("/auth/me"),
+    enabled: hasToken,
+    retry: false,
+  });
+  const me = meQuery.data;
+  const slugOk = me?.tenant.slug === slug;
 
-  const reloadHours = useCallback(async () => {
-    try {
-      setHours(await apiRequest<BusinessHours[]>("/hours"));
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) router.replace("/login");
-    }
-  }, [router]);
+  const servicesQuery = useQuery({
+    queryKey: ["services"],
+    queryFn: () => apiRequest<Service[]>("/services"),
+    enabled: slugOk,
+  });
+  const hoursQuery = useQuery({
+    queryKey: ["hours"],
+    queryFn: () => apiRequest<BusinessHours[]>("/hours"),
+    enabled: slugOk,
+  });
+  const settingsQuery = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => apiRequest<TenantSettings>("/settings"),
+    enabled: slugOk,
+  });
 
-  const reloadSettings = useCallback(async () => {
-    try {
-      setSettings(await apiRequest<TenantSettings>("/settings"));
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) router.replace("/login");
-    }
-  }, [router]);
-
+  // Redirects imperativos (navegação — não é fetch nem setState).
   useEffect(() => {
-    if (!getToken()) {
+    if (typeof window === "undefined") return;
+    if (!hasToken) {
       router.replace("/login");
       return;
     }
-    setAuthChecked(true);
-    void (async () => {
-      try {
-        const meRes = await apiRequest<MeResponse>("/auth/me");
-        // O slug na URL deve corresponder ao tenant do token.
-        if (meRes.tenant.slug !== slug) {
-          router.replace(`/${meRes.tenant.slug}`);
-          return;
-        }
-        setMe(meRes);
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 401) router.replace("/login");
-        return;
-      }
-      void reloadServices();
-      void reloadHours();
-      void reloadSettings();
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (meQuery.isError && meQuery.error instanceof ApiError && meQuery.error.status === 401) {
+      router.replace("/login");
+      return;
+    }
+    if (me && me.tenant.slug !== slug) router.replace(`/${me.tenant.slug}`);
+  }, [hasToken, me, meQuery.isError, meQuery.error, slug, router]);
 
-  if (!authChecked || !me) {
+  const reloadServices = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ["services"] }),
+    [queryClient],
+  );
+  const reloadHours = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ["hours"] }),
+    [queryClient],
+  );
+  const reloadSettings = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ["settings"] }),
+    [queryClient],
+  );
+
+  if (!me || me.tenant.slug !== slug) {
     return (
       <div className="bg-background flex min-h-svh items-center justify-center">
         <span className="text-muted-foreground font-mono text-sm">Carregando…</span>
@@ -113,7 +113,16 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <TenantContext.Provider
-      value={{ me, slug, services, hours, settings, reloadServices, reloadHours, reloadSettings }}
+      value={{
+        me,
+        slug,
+        services: servicesQuery.data ?? [],
+        hours: hoursQuery.data ?? [],
+        settings: settingsQuery.data ?? DEFAULT_SETTINGS,
+        reloadServices,
+        reloadHours,
+        reloadSettings,
+      }}
     >
       {children}
     </TenantContext.Provider>

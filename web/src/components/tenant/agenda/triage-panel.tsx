@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BellRing, CheckCheck } from "lucide-react";
 
@@ -21,51 +22,41 @@ const PHASE_TAG: Partial<Record<ApptPhase, { label: string; cls: string }>> = {
 /**
  * Substituto in-app do lembrete por WhatsApp (Fase A): lista os agendamentos que
  * já passaram do início e seguem sem status definido, para o dono atribuir 1 dos 5.
+ * Leitura via React Query (revalida a cada minuto); escrita via useMutation.
  */
 export function TriagePanel({ onResolved }: { onResolved: () => void }) {
   const { services, settings } = useTenant();
-  const [items, setItems] = useState<Appointment[] | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
-  const refresh = useCallback(async () => {
-    const t = Date.now();
-    try {
-      const res = await apiRequest<Appointment[]>(`/appointments?to=${encodeURIComponent(new Date(t).toISOString())}`);
-      setItems(res.filter((a) => NEEDS_TRIAGE.has(phaseOf(a, t, settings))));
-      setNow(t);
-    } catch (err) {
-      if (!(err instanceof ApiError && err.status === 401)) {
-        setItems([]);
-        setNow(t);
-      }
-    }
-  }, [settings]);
-
-  // Carrega ao montar (deferido p/ callback) e revalida a cada minuto.
+  // Avança o "agora" a cada minuto para as fases progredirem.
   useEffect(() => {
-    const first = setTimeout(() => void refresh(), 0);
-    const id = setInterval(() => void refresh(), 60_000);
-    return () => {
-      clearTimeout(first);
-      clearInterval(id);
-    };
-  }, [refresh]);
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
-  async function resolve(a: Appointment, status: string) {
-    setBusyId(a.id);
-    try {
-      await apiRequest(`/appointments/${a.id}`, { method: "PATCH", body: { status } });
+  const pendingQuery = useQuery({
+    queryKey: ["appointments", "pending"],
+    queryFn: () => apiRequest<Appointment[]>(`/appointments?to=${encodeURIComponent(new Date().toISOString())}`),
+    refetchInterval: 60_000,
+  });
+
+  const items = useMemo(
+    () => (pendingQuery.data ? pendingQuery.data.filter((a) => NEEDS_TRIAGE.has(phaseOf(a, now, settings))) : null),
+    [pendingQuery.data, now, settings],
+  );
+
+  const resolveMutation = useMutation({
+    mutationFn: (v: { id: number; status: string }) =>
+      apiRequest(`/appointments/${v.id}`, { method: "PATCH", body: { status: v.status } }),
+    onSuccess: () => {
       toast.success("Status definido");
-      await refresh();
+      void queryClient.invalidateQueries({ queryKey: ["appointments"] });
       onResolved();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao atualizar");
-    } finally {
-      setBusyId(null);
-    }
-  }
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao atualizar"),
+  });
 
   const count = items?.length ?? 0;
 
@@ -75,7 +66,7 @@ export function TriagePanel({ onResolved }: { onResolved: () => void }) {
         type="button"
         onClick={() => {
           setOpen(true);
-          void refresh();
+          void queryClient.invalidateQueries({ queryKey: ["appointments", "pending"] });
         }}
         className={cn(
           "focus-visible:ring-ring inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2",
@@ -115,6 +106,7 @@ export function TriagePanel({ onResolved }: { onResolved: () => void }) {
                 const service = a.service ?? services.find((s) => s.id === a.serviceId);
                 const start = new Date(a.startTime);
                 const transitions = NEXT_STATUS[a.status] ?? [];
+                const busy = resolveMutation.isPending && resolveMutation.variables?.id === a.id;
                 return (
                   <div key={a.id} className="space-y-2 rounded-lg border p-3">
                     <div className="flex items-start justify-between gap-2">
@@ -137,8 +129,8 @@ export function TriagePanel({ onResolved }: { onResolved: () => void }) {
                           key={t.value}
                           variant={t.value === "CANCELED" || t.value === "NO_SHOW" ? "ghost" : "outline"}
                           size="sm"
-                          disabled={busyId === a.id}
-                          onClick={() => resolve(a, t.value)}
+                          disabled={busy}
+                          onClick={() => resolveMutation.mutate({ id: a.id, status: t.value })}
                         >
                           {t.label}
                         </Button>

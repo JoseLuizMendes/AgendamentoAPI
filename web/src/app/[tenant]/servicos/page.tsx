@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Clock, Plus, RefreshCw, Tag } from "lucide-react";
 
@@ -17,29 +18,25 @@ export default function ServicosPage() {
   const [name, setName] = useState("");
   const [priceReais, setPriceReais] = useState("");
   const [duration, setDuration] = useState(30);
-  const [saving, setSaving] = useState(false);
 
-  async function createService() {
-    const priceInCents = Math.round(Number(priceReais.replace(",", ".")) * 100);
-    if (!name.trim()) return toast.error("Informe o nome do serviço");
-    if (!Number.isFinite(priceInCents) || priceInCents < 0) return toast.error("Preço inválido");
-
-    setSaving(true);
-    try {
-      await apiRequest("/services", {
-        method: "POST",
-        body: { name: name.trim(), priceInCents, durationInMinutes: duration },
-      });
+  const createMutation = useMutation({
+    mutationFn: (body: { name: string; priceInCents: number; durationInMinutes: number }) =>
+      apiRequest("/services", { method: "POST", body }),
+    onSuccess: async () => {
       toast.success("Serviço criado");
       setName("");
       setPriceReais("");
       setDuration(30);
       await reloadServices();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro inesperado");
-    } finally {
-      setSaving(false);
-    }
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro inesperado"),
+  });
+
+  function createService() {
+    const priceInCents = Math.round(Number(priceReais.replace(",", ".")) * 100);
+    if (!name.trim()) return toast.error("Informe o nome do serviço");
+    if (!Number.isFinite(priceInCents) || priceInCents < 0) return toast.error("Preço inválido");
+    createMutation.mutate({ name: name.trim(), priceInCents, durationInMinutes: duration });
   }
 
   return (
@@ -75,8 +72,8 @@ export default function ServicosPage() {
                 <Input id="svc-dur" type="number" min={1} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
               </div>
             </div>
-            <Button onClick={createService} disabled={saving} className="w-full">
-              <Plus className="size-4" /> {saving ? "Criando..." : "Criar serviço"}
+            <Button onClick={createService} disabled={createMutation.isPending} className="w-full">
+              <Plus className="size-4" /> {createMutation.isPending ? "Criando..." : "Criar serviço"}
             </Button>
           </CardContent>
         </Card>

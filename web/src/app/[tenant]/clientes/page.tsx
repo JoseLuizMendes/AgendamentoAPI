@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Search, Users } from "lucide-react";
 
@@ -54,18 +55,19 @@ function aggregate(appts: Appointment[]): Client[] {
 
 export default function ClientesPage() {
   const router = useRouter();
-  const [appts, setAppts] = useState<Appointment[] | null>(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("recent");
 
+  const { data: appts, error } = useQuery({
+    queryKey: ["appointments", "all"],
+    queryFn: () => apiRequest<Appointment[]>("/appointments"),
+  });
+
   useEffect(() => {
-    apiRequest<Appointment[]>("/appointments")
-      .then(setAppts)
-      .catch((err) => {
-        if (err instanceof ApiError && err.status === 401) router.replace("/login");
-        else toast.error(err instanceof ApiError ? err.message : "Erro ao carregar clientes");
-      });
-  }, [router]);
+    if (!error) return;
+    if (error instanceof ApiError && error.status === 401) router.replace("/login");
+    else toast.error(error instanceof ApiError ? error.message : "Erro ao carregar clientes");
+  }, [error, router]);
 
   const clients = useMemo(() => {
     if (!appts) return [];

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -31,16 +32,20 @@ import { TriagePanel } from "./triage-panel";
 const ACTIVE = new Set(["SCHEDULED", "CONFIRMED"]);
 const STATUS_ORDER = ["SCHEDULED", "CONFIRMED", "COMPLETED", "NO_SHOW", "CANCELED"] as const;
 const COLOR_MODE_KEY = "agenda:colorMode";
+const EMPTY_APPOINTMENTS: Appointment[] = [];
 
 export function AgendaCalendar() {
   const { services, hours, settings } = useTenant();
-  const rangeRef = useRef<{ start: string; end: string } | null>(null);
+  const queryClient = useQueryClient();
 
   const [mounted, setMounted] = useState(false);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loadingEvents, setLoadingEvents] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const [range, setRange] = useState<{ start: number; end: number } | null>(null);
+  const [range, setRange] = useState<{
+    startISO: string;
+    endISO: string;
+    startMs: number;
+    endMs: number;
+  } | null>(null);
   // Preferência de cor persiste entre sessões (init lazy — este subtree só
   // renderiza no client, depois do gate de auth do TenantProvider).
   const [colorMode, setColorMode] = useState<ColorMode>(() =>
@@ -65,32 +70,37 @@ export function AgendaCalendar() {
     localStorage.setItem(COLOR_MODE_KEY, mode);
   }
 
-  const fetchRange = useCallback(async (startISO: string, endISO: string) => {
-    setLoadingEvents(true);
-    try {
-      const res = await apiRequest<Appointment[]>(
-        `/appointments?from=${encodeURIComponent(startISO)}&to=${encodeURIComponent(endISO)}`,
-      );
-      setAppointments(res);
-    } catch (err) {
-      if (!(err instanceof ApiError && err.status === 401)) {
-        toast.error(err instanceof ApiError ? err.message : "Erro ao carregar agenda");
-      }
-    } finally {
-      setLoadingEvents(false);
-    }
-  }, []);
+  const appointmentsQuery = useQuery({
+    queryKey: ["appointments", "range", range?.startISO, range?.endISO],
+    queryFn: () =>
+      apiRequest<Appointment[]>(
+        `/appointments?from=${encodeURIComponent(range!.startISO)}&to=${encodeURIComponent(range!.endISO)}`,
+      ),
+    enabled: range !== null,
+  });
+  const appointments = appointmentsQuery.data ?? EMPTY_APPOINTMENTS;
+  const loadingEvents = appointmentsQuery.isFetching;
 
-  const reload = useCallback(() => {
-    if (rangeRef.current) void fetchRange(rangeRef.current.start, rangeRef.current.end);
-  }, [fetchRange]);
+  useEffect(() => {
+    const err = appointmentsQuery.error;
+    if (err && !(err instanceof ApiError && err.status === 401)) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao carregar agenda");
+    }
+  }, [appointmentsQuery.error]);
+
+  // Recarrega todas as queries de agendamento (agenda + triagem) — usado pelos drawers.
+  const reload = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+    [queryClient],
+  );
 
   function onDatesSet(arg: DatesSetArg) {
-    const start = arg.start.toISOString();
-    const end = arg.end.toISOString();
-    rangeRef.current = { start, end };
-    setRange({ start: arg.start.getTime(), end: arg.end.getTime() });
-    void fetchRange(start, end);
+    setRange({
+      startISO: arg.start.toISOString(),
+      endISO: arg.end.toISOString(),
+      startMs: arg.start.getTime(),
+      endMs: arg.end.getTime(),
+    });
   }
 
   const businessHours = useMemo(
@@ -134,10 +144,10 @@ export function AgendaCalendar() {
 
     // Sombreia o passado visível como indisponível (não dá pra agendar no passado).
     if (range) {
-      const pastEnd = Math.min(now, range.end);
-      if (pastEnd > range.start) {
+      const pastEnd = Math.min(now, range.endMs);
+      if (pastEnd > range.startMs) {
         list.push({
-          start: new Date(range.start).toISOString(),
+          start: new Date(range.startMs).toISOString(),
           end: new Date(pastEnd).toISOString(),
           display: "background",
           classNames: ["fc-past-bg"],
@@ -147,27 +157,35 @@ export function AgendaCalendar() {
     return list;
   }, [appointments, colorMode, now, settings, range]);
 
-  async function patchTimes(id: number, startISO: string, endISO: string, revert: () => void) {
-    try {
-      await apiRequest(`/appointments/${id}`, { method: "PATCH", body: { startTime: startISO, endTime: endISO } });
+  const patchTimesMutation = useMutation({
+    mutationFn: (v: { id: number; startTime: string; endTime: string }) =>
+      apiRequest(`/appointments/${v.id}`, { method: "PATCH", body: { startTime: v.startTime, endTime: v.endTime } }),
+    onSuccess: () => {
       toast.success("Agendamento atualizado");
-      reload();
-    } catch (err) {
-      revert();
-      toast.error(err instanceof ApiError ? err.message : "Erro ao atualizar");
-    }
+      void reload();
+    },
+  });
+
+  function applyMove(arg: EventDropArg | EventResizeDoneArg) {
+    const { start, end } = arg.event;
+    if (!start || !end) return arg.revert();
+    patchTimesMutation.mutate(
+      { id: Number(arg.event.id), startTime: start.toISOString(), endTime: end.toISOString() },
+      {
+        onError: (err) => {
+          arg.revert();
+          toast.error(err instanceof ApiError ? err.message : "Erro ao atualizar");
+        },
+      },
+    );
   }
 
   function onEventDrop(arg: EventDropArg) {
-    const { start, end } = arg.event;
-    if (!start || !end) return arg.revert();
-    void patchTimes(Number(arg.event.id), start.toISOString(), end.toISOString(), arg.revert);
+    applyMove(arg);
   }
 
   function onEventResize(arg: EventResizeDoneArg) {
-    const { start, end } = arg.event;
-    if (!start || !end) return arg.revert();
-    void patchTimes(Number(arg.event.id), start.toISOString(), end.toISOString(), arg.revert);
+    applyMove(arg);
   }
 
   function onSelect(arg: DateSelectArg) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Clock, Plus, RefreshCw } from "lucide-react";
 
@@ -20,22 +21,19 @@ export default function HorariosPage() {
   const [openTime, setOpenTime] = useState("09:00");
   const [closeTime, setCloseTime] = useState("18:00");
   const [isOff, setIsOff] = useState(false);
-  const [saving, setSaving] = useState(false);
 
-  async function createHours() {
-    setSaving(true);
-    try {
-      await apiRequest("/hours", {
-        method: "POST",
-        body: { dayOfWeek, openTime, closeTime, isOff: isOff || undefined },
-      });
+  const createHoursMutation = useMutation({
+    mutationFn: (body: { dayOfWeek: number; openTime: string; closeTime: string; isOff?: boolean }) =>
+      apiRequest("/hours", { method: "POST", body }),
+    onSuccess: async () => {
       toast.success(`Horário de ${DAYS[dayOfWeek]} salvo`);
       await reloadHours();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro inesperado");
-    } finally {
-      setSaving(false);
-    }
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro inesperado"),
+  });
+
+  function createHours() {
+    createHoursMutation.mutate({ dayOfWeek, openTime, closeTime, isOff: isOff || undefined });
   }
 
   return (
@@ -71,8 +69,8 @@ export default function HorariosPage() {
               <input type="checkbox" checked={isOff} onChange={(e) => setIsOff(e.target.checked)} className="accent-primary size-4" />
               Fechado neste dia
             </label>
-            <Button onClick={createHours} disabled={saving} className="w-full">
-              <Plus className="size-4" /> {saving ? "Salvando..." : "Salvar horário"}
+            <Button onClick={createHours} disabled={createHoursMutation.isPending} className="w-full">
+              <Plus className="size-4" /> {createHoursMutation.isPending ? "Salvando..." : "Salvar horário"}
             </Button>
           </CardContent>
         </Card>
@@ -125,26 +123,23 @@ export default function HorariosPage() {
 function TriageSettingsCard({ initial, onSaved }: { initial: TenantSettings; onSaved: () => Promise<void> }) {
   const [promptMin, setPromptMin] = useState(String(initial.statusPromptAfterStartMin));
   const [overdueMin, setOverdueMin] = useState(String(initial.overdueAfterEndMin));
-  const [saving, setSaving] = useState(false);
 
-  async function save() {
+  const saveMutation = useMutation({
+    mutationFn: (body: { statusPromptAfterStartMin: number; overdueAfterEndMin: number }) =>
+      apiRequest("/settings", { method: "PATCH", body }),
+    onSuccess: async () => {
+      toast.success("Triagem atualizada");
+      await onSaved();
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao salvar"),
+  });
+
+  function save() {
     const p = Number(promptMin);
     const o = Number(overdueMin);
     if (!Number.isInteger(p) || p < 0 || p > 1440) return toast.error("Minutos após o início inválidos (0–1440)");
     if (!Number.isInteger(o) || o < 0 || o > 1440) return toast.error("Minutos após o fim inválidos (0–1440)");
-    setSaving(true);
-    try {
-      await apiRequest("/settings", {
-        method: "PATCH",
-        body: { statusPromptAfterStartMin: p, overdueAfterEndMin: o },
-      });
-      toast.success("Triagem atualizada");
-      await onSaved();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao salvar");
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.mutate({ statusPromptAfterStartMin: p, overdueAfterEndMin: o });
   }
 
   return (
@@ -186,8 +181,8 @@ function TriageSettingsCard({ initial, onSaved }: { initial: TenantSettings; onS
             </p>
           </div>
         </div>
-        <Button onClick={save} disabled={saving} className="w-full sm:w-auto">
-          {saving ? "Salvando..." : "Salvar triagem"}
+        <Button onClick={save} disabled={saveMutation.isPending} className="w-full sm:w-auto">
+          {saveMutation.isPending ? "Salvando..." : "Salvar triagem"}
         </Button>
       </CardContent>
     </Card>

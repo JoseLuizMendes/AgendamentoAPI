@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Activity, CalendarDays, Download, DollarSign, Receipt, UserX, Users } from "lucide-react";
 
@@ -30,22 +31,26 @@ function argmax(arr: number[]): number {
 export default function DashboardPage() {
   const router = useRouter();
   const [periodKey, setPeriodKey] = useState<PeriodKey>("month");
-  const [summary, setSummary] = useState<ReportSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const {
+    data: summary,
+    isPending: loading,
+    error,
+  } = useQuery({
+    queryKey: ["reports", periodKey],
+    queryFn: () => {
+      const { from, to, granularity } = periodRange(periodKey);
+      return apiRequest<ReportSummary>(
+        `/reports/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&granularity=${granularity}`,
+      );
+    },
+  });
 
   useEffect(() => {
-    const { from, to, granularity } = periodRange(periodKey);
-    setLoading(true);
-    apiRequest<ReportSummary>(
-      `/reports/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&granularity=${granularity}`,
-    )
-      .then(setSummary)
-      .catch((err) => {
-        if (err instanceof ApiError && err.status === 401) router.replace("/login");
-        else toast.error(err instanceof ApiError ? err.message : "Erro ao carregar indicadores");
-      })
-      .finally(() => setLoading(false));
-  }, [periodKey, router]);
+    if (!error) return;
+    if (error instanceof ApiError && error.status === 401) router.replace("/login");
+    else toast.error(error instanceof ApiError ? error.message : "Erro ao carregar indicadores");
+  }, [error, router]);
 
   const weekdayData = useMemo(
     () => (summary?.byWeekday ?? []).map((v, i) => ({ label: WEEKDAYS[i] ?? String(i), value: v })),
