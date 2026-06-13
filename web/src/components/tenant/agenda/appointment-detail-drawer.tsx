@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { durationLabel, localInputToISO, toLocalInputValue } from "./datetime";
+import { DateTimePicker } from "./datetime-picker";
 
 export function AppointmentDetailDrawer({
   open,
@@ -163,14 +164,14 @@ function DetailContent({
               ))}
             </NativeSelect>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="e-start">Início</Label>
-              <Input id="e-start" type="datetime-local" className="h-11" value={startStr} onChange={(e) => setStartStr(e.target.value)} />
+              <DateTimePicker id="e-start" value={startStr} onChange={setStartStr} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="e-end">Fim</Label>
-              <Input id="e-end" type="datetime-local" className="h-11" value={endStr} onChange={(e) => setEndStr(e.target.value)} />
+              <DateTimePicker id="e-end" value={endStr} onChange={setEndStr} />
             </div>
           </div>
         </div>

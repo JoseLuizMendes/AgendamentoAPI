@@ -13,6 +13,7 @@ import type { Appointment } from "@/components/tenant/types";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type Client = {
   phone: string;
@@ -115,28 +116,33 @@ export default function ClientesPage() {
         <EmptyState icon={Users}>Nenhum cliente encontrado.</EmptyState>
       ) : (
         <div className="overflow-hidden rounded-xl border">
-          <div className="text-muted-foreground hidden grid-cols-[1.5fr_1fr_auto_auto] gap-4 border-b px-4 py-2.5 font-mono text-xs uppercase tracking-widest sm:grid">
-            <span>Cliente</span>
-            <span>Telefone</span>
-            <span className="text-right">Visitas</span>
-            <span className="text-right">Total</span>
-          </div>
-          {clients.map((c) => (
-            <div
-              key={c.phone || c.name}
-              className="hover:bg-muted/40 grid grid-cols-2 items-center gap-x-4 gap-y-1 border-b px-4 py-3 text-sm last:border-b-0 sm:grid-cols-[1.5fr_1fr_auto_auto]"
-            >
-              <div className="min-w-0">
-                <p className="truncate font-medium">{c.name}</p>
-                <p className="text-muted-foreground text-xs">
-                  últ. {new Date(c.lastVisit).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
-                </p>
-              </div>
-              <span className="text-muted-foreground truncate text-right sm:text-left">{c.phone || "—"}</span>
-              <span className="text-right tabular-nums">{c.visits}</span>
-              <span className="font-display text-right text-lg tracking-wide">{formatBRL(c.totalInCents)}</span>
-            </div>
-          ))}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="font-mono text-xs uppercase tracking-widest">Cliente</TableHead>
+                <TableHead className="font-mono text-xs uppercase tracking-widest">Telefone</TableHead>
+                <TableHead className="text-right font-mono text-xs uppercase tracking-widest">Visitas</TableHead>
+                <TableHead className="text-right font-mono text-xs uppercase tracking-widest">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {clients.map((c) => (
+                <TableRow key={c.phone || c.name}>
+                  <TableCell>
+                    <p className="truncate font-medium">{c.name}</p>
+                    <p className="text-muted-foreground text-xs">
+                      últ. {new Date(c.lastVisit).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+                    </p>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{c.phone || "—"}</TableCell>
+                  <TableCell className="text-right tabular-nums">{c.visits}</TableCell>
+                  <TableCell className="font-display text-right text-lg tracking-wide">
+                    {formatBRL(c.totalInCents)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
