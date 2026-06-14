@@ -276,6 +276,11 @@
   padding: 0.5rem 0;
 }
 
+/* Faixas de horário mais altas → blocos de agendamento mais legíveis (inclui os curtos). */
+.fc .fc-timegrid-slot {
+  height: 2rem;
+}
+
 /* Botões da toolbar com o nosso estilo */
 .fc .fc-button {
   border-radius: var(--radius-md);

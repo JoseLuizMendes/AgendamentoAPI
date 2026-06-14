@@ -35,6 +35,14 @@ const STATUS_ORDER = ["SCHEDULED", "CONFIRMED", "COMPLETED", "NO_SHOW", "CANCELE
 const COLOR_MODE_KEY = "agenda:colorMode";
 const EMPTY_APPOINTMENTS: Appointment[] = [];
 
+/** Desloca um horário "HH:MM" por `deltaMin` (clamp 00:00–24:00) → "HH:MM:00". */
+function shiftClock(hhmm: string, deltaMin: number) {
+  const [h, m] = hhmm.split(":").map(Number);
+  const total = Math.max(0, Math.min(24 * 60, h * 60 + m + deltaMin));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(Math.floor(total / 60))}:${pad(total % 60)}:00`;
+}
+
 export function AgendaCalendar() {
   const { services, hours, settings } = useTenant();
   const queryClient = useQueryClient();
@@ -110,10 +118,12 @@ export function AgendaCalendar() {
   );
 
   const openTimes = hours.filter((h) => !h.isOff);
-  const slotMinTime = openTimes.length ? `${[...openTimes.map((h) => h.openTime)].sort()[0]}:00` : "07:00:00";
-  const slotMaxTime = openTimes.length
-    ? `${[...openTimes.map((h) => h.closeTime)].sort().at(-1)}:00`
-    : "20:00:00";
+  // Folga antes da abertura e depois do fechamento → eventos nas pontas do
+  // expediente não ficam grudados na borda da grade.
+  const earliestOpen = openTimes.length ? [...openTimes.map((h) => h.openTime)].sort()[0] : "07:00";
+  const latestClose = openTimes.map((h) => h.closeTime).sort().at(-1) ?? "20:00";
+  const slotMinTime = shiftClock(earliestOpen, -30);
+  const slotMaxTime = shiftClock(latestClose, 60);
 
   const events: EventInput[] = useMemo(() => {
     const list: EventInput[] = appointments.map((a) => {
@@ -215,8 +225,27 @@ export function AgendaCalendar() {
       return <div className="px-1 py-0.5 text-[11px] font-medium leading-tight">{arg.timeText}</div>;
     }
     const service = a.service ?? services.find((s) => s.id === a.serviceId);
+    const start = arg.event.start;
+    const end = arg.event.end;
+    const durationMin = start && end ? (end.getTime() - start.getTime()) / 60000 : 60;
+    const startLabel = start
+      ? `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`
+      : arg.timeText;
+    const title = `${arg.timeText} · ${a.customerName}${service ? ` · ${service.name}` : ""}`;
+
+    // Serviços curtos (< 30 min) ocupam um bloco fino — mostra só uma linha (hora +
+    // nome) pra não estourar; o resto fica no title (hover) e no drawer de detalhes.
+    if (durationMin < 30) {
+      return (
+        <div className="flex h-full items-center gap-1 overflow-hidden px-1 leading-none" title={title}>
+          <span className="shrink-0 text-[10px] opacity-80">{startLabel}</span>
+          <span className="truncate text-[11px] font-semibold">{a.customerName}</span>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex flex-col overflow-hidden px-1 py-0.5 leading-tight">
+      <div className="flex h-full flex-col overflow-hidden px-1 py-0.5 leading-tight" title={title}>
         <span className="text-[11px] opacity-90">{arg.timeText}</span>
         <span className="truncate text-xs font-semibold">{a.customerName}</span>
         {service ? <span className="truncate text-[11px] opacity-90">{service.name}</span> : null}
@@ -264,7 +293,6 @@ export function AgendaCalendar() {
           expandRows
           height="100%"
           selectable
-          selectMirror
           selectAllow={(span) => span.start.getTime() >= Date.now()}
           editable
           eventResizableFromStart
