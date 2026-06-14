@@ -7,7 +7,7 @@ import { CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
+import { HourPicker } from "@/components/ui/hour-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 /**
@@ -60,9 +60,9 @@ export function DateTimePicker({
           locale={ptBR}
           autoFocus
         />
-        <div className="flex items-center gap-2 border-t p-3">
-          <span className="text-muted-foreground text-sm">Hora</span>
-          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="h-9" />
+        <div className="space-y-1.5 border-t p-3">
+          <p className="text-muted-foreground text-xs">Hora</p>
+          <HourPicker value={time} onChange={setTime} aria-label="Hora" />
         </div>
       </PopoverContent>
     </Popover>
