@@ -36,7 +36,6 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
         <CalendarClock className="size-5 shrink-0" />
         <div className="min-w-0">
           <p className="font-display truncate text-lg leading-none">{me.tenant.name}</p>
-          <p className="text-muted-foreground truncate font-mono text-[11px] leading-tight">/{slug}</p>
         </div>
       </div>
 

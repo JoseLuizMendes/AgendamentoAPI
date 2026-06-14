@@ -20,6 +20,8 @@ dropdown-menu, tabs, sonner, skeleton, separator, alert, avatar, badge, `native-
   o overwrite (responder N) e, se faltar, criar/ajustar o arquivo manualmente.
 - Convenção do projeto: `cn` de `@/lib/utils`; `Button`/`buttonVariants` de `button.tsx`. Radix vem
   ora como `@radix-ui/react-*` (antigos), ora pelo meta-pacote `radix-ui` (novos) — ambos ok.
+- **Base UI (`@base-ui/react`)**: autorizado **só** para o `combobox` (trilha nova do shadcn) —
+  exceção registrada na raiz (2026-06-14). Para primitivos novos, preferir Radix.
 - **Não colocar regra de negócio aqui.** São primitivos de apresentação reutilizáveis.
 - `native-select` é custom do projeto (não-shadcn) — mantê-lo.
 

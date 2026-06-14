@@ -156,4 +156,8 @@ são apenas os **não-fetch** (`setMounted`, `theme-toggle`, `hero`) — qualque
 ## Exceções aprovadas (registro)
 
 - **Stack backend = Fastify** (não NestJS) — decisão do dev.
+- **UI: Base UI (`@base-ui/react`) para o `combobox`** — 2026-06-14, decisão do dev. A trilha nova
+  do shadcn gera o Combobox sobre Base UI; o canon de UI fica ampliado para **Radix + Base UI**
+  (ambos sob shadcn/ui). Demais primitivos continuam em Radix (`@radix-ui/react-*` ou o
+  meta-pacote `radix-ui`).
 - _(novas exceções entram aqui, com data e justificativa, via C6)_
