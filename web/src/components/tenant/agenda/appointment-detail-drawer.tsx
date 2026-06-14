@@ -8,6 +8,17 @@ import { CalendarClock, Pencil, Phone, Tag, Trash2 } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { formatBRL, NEXT_STATUS, StatusPill } from "@/components/tenant/shared";
 import type { Appointment, Service } from "@/components/tenant/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +60,7 @@ function DetailContent({
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const [name, setName] = useState(a.customerName);
   const [phone, setPhone] = useState(a.customerPhone);
@@ -123,8 +135,8 @@ function DetailContent({
   }
 
   function remove() {
-    if (!window.confirm("Excluir este agendamento?")) return;
     removeMutation.mutate();
+    setConfirmOpen(false);
   }
 
   return (
@@ -240,9 +252,30 @@ function DetailContent({
           <Button variant="outline" className="flex-1" disabled={busy} onClick={() => setEditing(true)}>
             <Pencil className="size-4" /> Editar
           </Button>
-          <Button variant="ghost" className="text-destructive hover:text-destructive flex-1" disabled={busy} onClick={remove}>
-            <Trash2 className="size-4" /> Excluir
-          </Button>
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" className="text-destructive hover:text-destructive flex-1" disabled={busy}>
+                <Trash2 className="size-4" /> Excluir
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir agendamento</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={remove}
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
     </SheetContent>
