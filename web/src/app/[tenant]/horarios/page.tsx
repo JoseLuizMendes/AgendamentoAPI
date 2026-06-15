@@ -19,12 +19,12 @@ export default function HorariosPage() {
   const editorKey = `${selectedDay}:${current?.openTime ?? ""}:${current?.closeTime ?? ""}:${current?.isOff ?? false}:${current?.breaks.map((b) => b.id).join(",") ?? ""}`;
 
   return (
-    <div className="mx-auto max-w-6xl p-6 lg:p-8">
+    <div className="mx-auto max-w-7xl p-6 lg:p-8">
       <Bento>
-        <WeekCard className="h-fit lg:col-span-3" selectedDay={selectedDay} onSelectDay={setSelectedDay} />
+        <WeekCard className="h-fit lg:col-span-2 lg:row-span-2" selectedDay={selectedDay} onSelectDay={setSelectedDay} />
         <DayEditorCard
           key={editorKey}
-          className="h-fit lg:col-span-3"
+          className="h-fit lg:col-span-4"
           dayOfWeek={selectedDay}
           current={current}
           allHours={hours}
@@ -33,7 +33,7 @@ export default function HorariosPage() {
         <OverridesCard className="h-fit lg:col-span-2" />
         <TriageSettingsCard
           key={`${settings.statusPromptAfterStartMin}-${settings.overdueAfterEndMin}`}
-          className="lg:col-span-4"
+          className="lg:col-span-2"
           initial={settings}
           onSaved={reloadSettings}
         />
