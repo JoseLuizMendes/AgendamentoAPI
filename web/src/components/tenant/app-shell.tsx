@@ -53,7 +53,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                 active
-                  ? "bg-foreground text-background font-medium"
+                  ? "relative bg-foreground/[0.07] font-medium text-foreground before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-[var(--ring)]"
                   : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground",
               )}
             >
@@ -89,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const title = current?.label ?? "Workspace";
 
   return (
-    <div className="bg-background flex min-h-svh">
+    <div className="workspace bg-background flex min-h-svh">
       {/* Sidebar fixa (desktop) */}
       <aside className="bg-background sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r lg:flex">
         <SidebarInner />
