@@ -160,4 +160,6 @@ são apenas os **não-fetch** (`setMounted`, `theme-toggle`, `hero`) — qualque
   do shadcn gera o Combobox sobre Base UI; o canon de UI fica ampliado para **Radix + Base UI**
   (ambos sob shadcn/ui). Demais primitivos continuam em Radix (`@radix-ui/react-*` ou o
   meta-pacote `radix-ui`).
+- **Vitest ligado no `web`** — 2026-06-15. O `web` passou a ter unit-test runner (Vitest, já no
+  canon) para lógica pura de UI (ex.: `availability.ts` da agenda). `pnpm -C web test`.
 - _(novas exceções entram aqui, com data e justificativa, via C6)_
