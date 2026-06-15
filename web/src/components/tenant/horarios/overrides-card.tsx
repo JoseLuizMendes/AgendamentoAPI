@@ -5,12 +5,13 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarOff, Plus, Trash2 } from "lucide-react";
+import { CalendarOff, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { apiRequest, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/components/tenant/tenant-context";
 import { EmptyState } from "@/components/tenant/shared";
+import type { BusinessDateOverride } from "@/components/tenant/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -33,37 +34,7 @@ import {
 /** Exceções de data (feriados / horário especial) — CRUD sobre /overrides. */
 export function OverridesCard({ className }: { className?: string }) {
   const { overrides, reloadOverrides } = useTenant();
-  const [date, setDate] = useState<Date | undefined>(undefined);
-  const [closed, setClosed] = useState(true);
-  const [openTime, setOpenTime] = useState("");
-  const [closeTime, setCloseTime] = useState("");
-  const [calOpen, setCalOpen] = useState(false);
-
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      if (!date) throw new ApiError("Escolha uma data", 400);
-      const body: { date: string; isOff?: boolean; openTime?: string; closeTime?: string } = {
-        date: format(date, "yyyy-MM-dd"),
-      };
-      if (closed) {
-        body.isOff = true;
-      } else {
-        if (!openTime || !closeTime) throw new ApiError("Informe abertura e fechamento", 400);
-        body.openTime = openTime;
-        body.closeTime = closeTime;
-      }
-      await apiRequest("/overrides", { method: "POST", body });
-    },
-    onSuccess: async () => {
-      toast.success("Exceção salva");
-      setDate(undefined);
-      setClosed(true);
-      setOpenTime("");
-      setCloseTime("");
-      await reloadOverrides();
-    },
-    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao salvar exceção"),
-  });
+  const [editing, setEditing] = useState<BusinessDateOverride | null>(null);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiRequest(`/overrides/${id}`, { method: "DELETE" }),
@@ -83,8 +54,133 @@ export function OverridesCard({ className }: { className?: string }) {
         <CardDescription>Feriados e dias com horário especial.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>Data</Label>
+        {/* Keyed por id (ou "new") → remonta com os valores certos ao entrar/sair de edição,
+            sem useEffect de sync. */}
+        <OverrideForm key={editing?.id ?? "new"} initial={editing} onDone={() => setEditing(null)} />
+
+        <div className="space-y-2 border-t pt-3">
+          {sorted.length === 0 ? (
+            <EmptyState icon={CalendarOff}>Nenhuma exceção cadastrada.</EmptyState>
+          ) : (
+            sorted.map((o) => (
+              <div
+                key={o.id}
+                className={cn(
+                  "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm",
+                  editing?.id === o.id && "border-primary",
+                )}
+              >
+                <span className="min-w-0 truncate">
+                  <span className="font-mono">{format(new Date(`${o.date}T00:00:00`), "dd/MM/yyyy")}</span>
+                  <span className="text-muted-foreground">
+                    {" · "}
+                    {o.isOff || !o.openTime ? "Fechado" : `${o.openTime}–${o.closeTime}`}
+                  </span>
+                </span>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => setEditing(o)}
+                    aria-label="Editar exceção"
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label="Excluir exceção"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir exceção</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Remover a exceção dessa data? O dia volta ao horário normal da semana.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={() => {
+                            if (editing?.id === o.id) setEditing(null);
+                            deleteMutation.mutate(o.id);
+                          }}
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Form de exceção (criar ou editar). Remontado por `key` no pai → estado inicial fresco de
+ * `initial`, sem useEffect de sync. Ao editar, a data fica travada (o PUT não altera a data).
+ */
+function OverrideForm({ initial, onDone }: { initial: BusinessDateOverride | null; onDone: () => void }) {
+  const { reloadOverrides } = useTenant();
+  const isEdit = initial != null;
+  const [date, setDate] = useState<Date | undefined>(
+    initial ? new Date(`${initial.date}T00:00:00`) : undefined,
+  );
+  const [closed, setClosed] = useState(initial ? initial.isOff || !initial.openTime : true);
+  const [openTime, setOpenTime] = useState(initial?.openTime ?? "");
+  const [closeTime, setCloseTime] = useState(initial?.closeTime ?? "");
+  const [calOpen, setCalOpen] = useState(false);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!date) throw new ApiError("Escolha uma data", 400);
+      const body: { date?: string; isOff?: boolean; openTime?: string; closeTime?: string } = {};
+      if (!isEdit) body.date = format(date, "yyyy-MM-dd");
+      if (closed) {
+        body.isOff = true;
+      } else {
+        if (!openTime || !closeTime) throw new ApiError("Informe abertura e fechamento", 400);
+        body.isOff = false;
+        body.openTime = openTime;
+        body.closeTime = closeTime;
+      }
+      if (initial) {
+        await apiRequest(`/overrides/${initial.id}`, { method: "PUT", body });
+      } else {
+        await apiRequest("/overrides", { method: "POST", body });
+      }
+    },
+    onSuccess: async () => {
+      toast.success(isEdit ? "Exceção atualizada" : "Exceção salva");
+      await reloadOverrides();
+      onDone();
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao salvar exceção"),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Data</Label>
+        {isEdit ? (
+          <p className="text-muted-foreground text-sm">
+            <span className="font-mono">{date ? format(date, "dd 'de' MMM yyyy", { locale: ptBR }) : ""}</span>
+            <span className="ml-2 text-xs">(trocar data = excluir e recriar)</span>
+          </p>
+        ) : (
           <Popover open={calOpen} onOpenChange={setCalOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -109,80 +205,38 @@ export function OverridesCard({ className }: { className?: string }) {
               />
             </PopoverContent>
           </Popover>
-        </div>
+        )}
+      </div>
 
-        <Label className="flex items-center gap-2 text-sm">
-          <Checkbox checked={closed} onCheckedChange={(c) => setClosed(!!c)} className="size-4" />
-          Fechado neste dia
-        </Label>
+      <Label className="flex items-center gap-2 text-sm">
+        <Checkbox checked={closed} onCheckedChange={(c) => setClosed(!!c)} className="size-4" />
+        Fechado neste dia
+      </Label>
 
-        {!closed ? (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Abre</Label>
-              <HourPicker value={openTime} onChange={setOpenTime} aria-label="Hora de abertura" />
-            </div>
-            <div className="space-y-2">
-              <Label>Fecha</Label>
-              <HourPicker value={closeTime} onChange={setCloseTime} aria-label="Hora de fechamento" />
-            </div>
+      {!closed ? (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Abre</Label>
+            <HourPicker value={openTime} onChange={setOpenTime} aria-label="Hora de abertura" />
           </div>
-        ) : null}
-
-        <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="w-full">
-          <Plus className="size-4" /> {createMutation.isPending ? "Salvando..." : "Adicionar exceção"}
-        </Button>
-
-        <div className="space-y-2 border-t pt-3">
-          {sorted.length === 0 ? (
-            <EmptyState icon={CalendarOff}>Nenhuma exceção cadastrada.</EmptyState>
-          ) : (
-            sorted.map((o) => (
-              <div
-                key={o.id}
-                className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
-              >
-                <span className="min-w-0 truncate">
-                  <span className="font-mono">{format(new Date(`${o.date}T00:00:00`), "dd/MM/yyyy")}</span>
-                  <span className="text-muted-foreground">
-                    {" · "}
-                    {o.isOff || !o.openTime ? "Fechado" : `${o.openTime}–${o.closeTime}`}
-                  </span>
-                </span>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-foreground hover:text-destructive shrink-0"
-                      aria-label="Excluir exceção"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Excluir exceção</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Remover a exceção dessa data? O dia volta ao horário normal da semana.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        onClick={() => deleteMutation.mutate(o.id)}
-                      >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            ))
-          )}
+          <div className="space-y-2">
+            <Label>Fecha</Label>
+            <HourPicker value={closeTime} onChange={setCloseTime} aria-label="Hora de fechamento" />
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      ) : null}
+
+      <div className="flex gap-2">
+        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="flex-1">
+          <Plus className="size-4" />{" "}
+          {saveMutation.isPending ? "Salvando..." : isEdit ? "Salvar alteração" : "Adicionar exceção"}
+        </Button>
+        {isEdit ? (
+          <Button type="button" variant="ghost" onClick={onDone} disabled={saveMutation.isPending}>
+            Cancelar
+          </Button>
+        ) : null}
+      </div>
+    </div>
   );
 }
