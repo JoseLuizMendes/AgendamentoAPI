@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiRequest, ApiError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import type { BusinessHours, MeResponse, Service, TenantSettings } from "./types";
+import type { BusinessDateOverride, BusinessHours, MeResponse, Service, TenantSettings } from "./types";
 
 const DEFAULT_SETTINGS: TenantSettings = {
   allowCustomerBooking: false,
@@ -24,9 +24,11 @@ type TenantContextValue = {
   services: Service[];
   hours: BusinessHours[];
   settings: TenantSettings;
+  overrides: BusinessDateOverride[];
   reloadServices: () => Promise<void>;
   reloadHours: () => Promise<void>;
   reloadSettings: () => Promise<void>;
+  reloadOverrides: () => Promise<void>;
 };
 
 const TenantContext = createContext<TenantContextValue | null>(null);
@@ -75,6 +77,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     queryFn: () => apiRequest<TenantSettings>("/settings"),
     enabled: slugOk,
   });
+  const overridesQuery = useQuery({
+    queryKey: ["overrides"],
+    queryFn: () => apiRequest<BusinessDateOverride[]>("/overrides"),
+    enabled: slugOk,
+  });
 
   // Redirects imperativos (navegação — não é fetch nem setState).
   useEffect(() => {
@@ -102,6 +109,10 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     () => queryClient.invalidateQueries({ queryKey: ["settings"] }),
     [queryClient],
   );
+  const reloadOverrides = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ["overrides"] }),
+    [queryClient],
+  );
 
   if (!me || me.tenant.slug !== slug) {
     return (
@@ -119,9 +130,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         services: servicesQuery.data ?? [],
         hours: hoursQuery.data ?? [],
         settings: settingsQuery.data ?? DEFAULT_SETTINGS,
+        overrides: overridesQuery.data ?? [],
         reloadServices,
         reloadHours,
         reloadSettings,
+        reloadOverrides,
       }}
     >
       {children}

@@ -124,6 +124,7 @@ model BusinessBreak {
   businessHours   BusinessHours @relation(fields: [businessHoursId], references: [id], onDelete: Cascade)
   startTime       String
   endTime         String
+  label           String?
 
   @@index([businessHoursId])
 }

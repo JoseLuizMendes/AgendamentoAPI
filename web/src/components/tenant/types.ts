@@ -17,11 +17,30 @@ export type Service = {
   tenantId: number;
 };
 
+export type BusinessBreak = {
+  id: number;
+  businessHoursId: number;
+  startTime: string;
+  endTime: string;
+  label?: string | null;
+};
+
 export type BusinessHours = {
   id: number;
   dayOfWeek: number;
   openTime: string;
   closeTime: string;
+  isOff: boolean;
+  tenantId: number;
+  breaks: BusinessBreak[];
+};
+
+/** Exceção de data (feriado / horário especial). Espelha GET /overrides. */
+export type BusinessDateOverride = {
+  id: number;
+  date: string; // YYYY-MM-DD
+  openTime?: string | null;
+  closeTime?: string | null;
   isOff: boolean;
   tenantId: number;
 };

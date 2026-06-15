@@ -136,6 +136,7 @@ export const OverrideParamsSchema = z.object({
 export const BreakCreateSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   endTime: z.string().regex(/^\d{2}:\d{2}$/),
+  label: z.string().max(60).optional(),
 });
 
 export const BreakParamsSchema = z.object({
