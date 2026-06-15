@@ -24,7 +24,7 @@ feriados), `triage-card` (limiares de triagem de status).
   na unique `tenantId+dayOfWeek`).
 - **Sem `set-state-in-effect`**: o `day-editor` é remontado por `key` (dia + valores) no
   `page.tsx` para reiniciar o estado — não sincronizar via efeito.
-- **Só tokens** (sem hex). Reusar `HourPicker`, `Combobox`, `Checkbox`, `AlertDialog`,
+- **Só tokens** (sem hex). Reusar `HourPicker`, `Checkbox`, `AlertDialog`,
   `Calendar`/`Popover`, `Card`, `Input` de `@/components/ui/*`; `DAYS`/`EmptyState` de
   `../shared`.
 - **Mutations**: `useMutation` + `apiRequest` + `toast` (sonner); erros via `ApiError`.

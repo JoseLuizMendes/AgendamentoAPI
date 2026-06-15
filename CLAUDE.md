@@ -156,10 +156,9 @@ são apenas os **não-fetch** (`setMounted`, `theme-toggle`, `hero`) — qualque
 ## Exceções aprovadas (registro)
 
 - **Stack backend = Fastify** (não NestJS) — decisão do dev.
-- **UI: Base UI (`@base-ui/react`) para o `combobox`** — 2026-06-14, decisão do dev. A trilha nova
-  do shadcn gera o Combobox sobre Base UI; o canon de UI fica ampliado para **Radix + Base UI**
-  (ambos sob shadcn/ui). Demais primitivos continuam em Radix (`@radix-ui/react-*` ou o
-  meta-pacote `radix-ui`).
+- ~~**UI: Base UI (`@base-ui/react`) para o `combobox`**~~ — **revertida em 2026-06-15**: o
+  `combobox` ficou sem uso após o bento de Horários; `combobox.tsx` apagado e `@base-ui/react`
+  removido. Canon de UI volta a **Radix puro** (`@radix-ui/react-*` ou o meta-pacote `radix-ui`).
 - **Vitest ligado no `web`** — 2026-06-15. O `web` passou a ter unit-test runner (Vitest, já no
   canon) para lógica pura de UI (ex.: `availability.ts` da agenda). `pnpm -C web test`.
 - _(novas exceções entram aqui, com data e justificativa, via C6)_
