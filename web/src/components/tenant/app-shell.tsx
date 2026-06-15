@@ -53,7 +53,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                 active
-                  ? "relative bg-foreground/[0.07] font-medium text-foreground before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-[var(--ring)]"
+                  ? "relative bg-foreground/[0.07] font-medium text-foreground before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-foreground"
                   : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground",
               )}
             >

@@ -62,7 +62,7 @@ export function WeekCard({
               key={idx}
               className={cn(
                 "flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors",
-                selected ? "border-ring bg-muted/50" : "hover:bg-muted/30",
+                selected ? "border-foreground/40 bg-muted/60" : "hover:bg-muted/30",
                 !h && "opacity-70",
               )}
             >

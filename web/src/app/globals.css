@@ -100,7 +100,7 @@
   --accent-foreground: oklch(0.22 0.012 262);
   --border: oklch(0.9 0.006 258);
   --input: oklch(0.9 0.006 258);
-  --ring: oklch(0.62 0.21 22);
+  --ring: oklch(0.62 0.012 258);
   --chart-1: #5b86e0;
   --chart-2: #2bb98f;
   --chart-3: #d99a3a;
@@ -113,7 +113,7 @@
   --sidebar-accent: oklch(0.965 0.004 258);
   --sidebar-accent-foreground: oklch(0.22 0.012 262);
   --sidebar-border: oklch(0.9 0.006 258);
-  --sidebar-ring: oklch(0.62 0.21 22);
+  --sidebar-ring: oklch(0.62 0.012 258);
 }
 
 .dark .workspace {
@@ -133,7 +133,7 @@
   --accent-foreground: oklch(0.965 0.004 255);
   --border: oklch(0.97 0.01 258 / 9%);
   --input: oklch(0.97 0.01 258 / 13%);
-  --ring: oklch(0.66 0.2 22);
+  --ring: oklch(0.58 0.012 258);
   --chart-1: #5b86e0;
   --chart-2: #2bb98f;
   --chart-3: #d99a3a;
@@ -146,7 +146,7 @@
   --sidebar-accent: oklch(0.255 0.008 262);
   --sidebar-accent-foreground: oklch(0.965 0.004 255);
   --sidebar-border: oklch(0.97 0.01 258 / 9%);
-  --sidebar-ring: oklch(0.66 0.2 22);
+  --sidebar-ring: oklch(0.58 0.012 258);
 }
 
 @theme inline {
