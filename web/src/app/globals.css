@@ -360,8 +360,8 @@
 .fc .fc-event.fc-appt-now {
   box-shadow: 0 0 0 1px var(--background), 0 0 0 3px var(--primary);
 }
-/* Passado indisponível: sombreamento do bloco de fundo. */
-.fc .fc-bg-event.fc-past-bg {
+/* Indisponível (passado, fechado, feriado, fora do expediente, intervalo): faixa de fundo. */
+.fc .fc-bg-event.fc-locked-bg {
   background: var(--muted-foreground);
   opacity: 0.08;
 }

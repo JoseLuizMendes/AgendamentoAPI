@@ -25,6 +25,7 @@ import { useTenant } from "@/components/tenant/tenant-context";
 import { STATUS_META } from "@/components/tenant/shared";
 import type { Appointment, Service } from "@/components/tenant/types";
 import { serviceColor, statusColor, type ColorMode } from "./colors";
+import { computeLockedBands, isAvailable, type Interval } from "./availability";
 import { phaseOf, PHASE_CLASS } from "./phase";
 import { AppointmentCreateDrawer } from "./appointment-create-drawer";
 import { AppointmentDetailDrawer } from "./appointment-detail-drawer";
@@ -44,7 +45,7 @@ function shiftClock(hhmm: string, deltaMin: number) {
 }
 
 export function AgendaCalendar() {
-  const { services, hours, settings } = useTenant();
+  const { services, hours, settings, overrides } = useTenant();
   const queryClient = useQueryClient();
 
   const mounted = useMounted();
@@ -64,6 +65,7 @@ export function AgendaCalendar() {
   const [createOpen, setCreateOpen] = useState(false);
   const [detail, setDetail] = useState<Appointment | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [viewType, setViewType] = useState("timeGridWeek");
 
   // Avança o "agora" a cada minuto para as fases progredirem em tempo real.
   useEffect(() => {
@@ -101,6 +103,7 @@ export function AgendaCalendar() {
   );
 
   function onDatesSet(arg: DatesSetArg) {
+    setViewType(arg.view.type);
     setRange({
       startISO: arg.start.toISOString(),
       endISO: arg.end.toISOString(),
@@ -109,14 +112,6 @@ export function AgendaCalendar() {
     });
   }
 
-  const businessHours = useMemo(
-    () =>
-      hours
-        .filter((h) => !h.isOff)
-        .map((h) => ({ daysOfWeek: [h.dayOfWeek], startTime: h.openTime, endTime: h.closeTime })),
-    [hours],
-  );
-
   const openTimes = hours.filter((h) => !h.isOff);
   // Folga antes da abertura e depois do fechamento → eventos nas pontas do
   // expediente não ficam grudados na borda da grade.
@@ -124,6 +119,23 @@ export function AgendaCalendar() {
   const latestClose = openTimes.map((h) => h.closeTime).sort().at(-1) ?? "20:00";
   const slotMinTime = shiftClock(earliestOpen, -30);
   const slotMaxTime = shiftClock(latestClose, 60);
+
+  const visibleDays = useMemo(() => {
+    if (!range) return [] as Date[];
+    const days: Date[] = [];
+    const cursor = new Date(range.startMs);
+    cursor.setHours(0, 0, 0, 0);
+    while (cursor.getTime() < range.endMs) {
+      days.push(new Date(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return days;
+  }, [range]);
+
+  const lockedBands = useMemo<Interval[]>(() => {
+    if (!viewType.startsWith("timeGrid")) return [];
+    return computeLockedBands(visibleDays, hours, overrides, new Date(now), slotMinTime, slotMaxTime);
+  }, [viewType, visibleDays, hours, overrides, now, slotMinTime, slotMaxTime]);
 
   const events: EventInput[] = useMemo(() => {
     const list: EventInput[] = appointments.map((a) => {
@@ -150,20 +162,18 @@ export function AgendaCalendar() {
       };
     });
 
-    // Sombreia o passado visível como indisponível (não dá pra agendar no passado).
-    if (range) {
-      const pastEnd = Math.min(now, range.endMs);
-      if (pastEnd > range.startMs) {
-        list.push({
-          start: new Date(range.startMs).toISOString(),
-          end: new Date(pastEnd).toISOString(),
-          display: "background",
-          classNames: ["fc-past-bg"],
-        });
-      }
+    // Faixas cinza das regiões indisponíveis (passado, fechado, feriado, fora do
+    // expediente, intervalo) — calculadas pelo helper de disponibilidade.
+    for (const band of lockedBands) {
+      list.push({
+        start: band.start.toISOString(),
+        end: band.end.toISOString(),
+        display: "background",
+        classNames: ["fc-locked-bg"],
+      });
     }
     return list;
-  }, [appointments, colorMode, now, settings, range]);
+  }, [appointments, colorMode, now, settings, lockedBands]);
 
   const patchTimesMutation = useMutation({
     mutationFn: (v: { id: number; startTime: string; endTime: string }) =>
@@ -289,11 +299,19 @@ export function AgendaCalendar() {
           eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false, meridiem: false }}
           slotMinTime={slotMinTime}
           slotMaxTime={slotMaxTime}
-          businessHours={businessHours}
           expandRows
           height="100%"
           selectable
-          selectAllow={(span) => span.start.getTime() >= Date.now()}
+          selectAllow={(span) =>
+            viewType.startsWith("timeGrid")
+              ? isAvailable(span.start, span.end, hours, overrides, new Date(now), slotMinTime, slotMaxTime)
+              : span.start.getTime() >= Date.now()
+          }
+          eventAllow={(dropInfo) =>
+            viewType.startsWith("timeGrid")
+              ? isAvailable(dropInfo.start, dropInfo.end, hours, overrides, new Date(now), slotMinTime, slotMaxTime)
+              : true
+          }
           editable
           eventResizableFromStart
           events={events}
