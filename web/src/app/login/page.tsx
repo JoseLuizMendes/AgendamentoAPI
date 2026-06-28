@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { ArrowRight } from "lucide-react";
 
 import { apiRequest, ApiError } from "@/lib/api";
-import { setToken } from "@/lib/auth";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { PasswordInput } from "@/components/auth/password-input";
 import { Eyebrow } from "@/components/brand/eyebrow";
@@ -32,13 +31,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await apiRequest<LoginResponse>("/auth/login", {
+      await apiRequest<LoginResponse>("/auth/login", {
         method: "POST",
-        auth: false,
         body: { email, password, tenantSlug },
       });
 
-      setToken(res.token);
       toast.success("Bem-vindo de volta!");
       router.push(`/${tenantSlug}`);
     } catch (err) {

@@ -9,9 +9,10 @@ escopo: "Utilitários do frontend (transport, auth, helpers)"
 
 ## Escopo
 
-`api.ts` (`apiRequest`/`ApiError` — transport HTTP com base `NEXT_PUBLIC_API_URL`), `auth.ts`
-(token JWT em `localStorage`, chave `agendamento.jwt`), `utils.ts` (`cn`), `use-mounted.ts`
-(hook de hidratação via `useSyncExternalStore`).
+`api.ts` (`apiRequest`/`ApiError` — transport HTTP com base `NEXT_PUBLIC_API_URL`; **`credentials:
+"include"`** envia/recebe o cookie httpOnly de sessão), `auth.ts` (`logout()` → `POST /auth/logout`,
+que limpa o cookie no servidor), `utils.ts` (`cn`), `use-mounted.ts` (hook de hidratação via
+`useSyncExternalStore`).
 
 ## Diretrizes
 

@@ -19,8 +19,9 @@ clientes,servicos,horarios}`). Landing institucional em `components/landing`.
 - **Data fetching = React Query (`@tanstack/react-query`).** **`useEffect` para buscar dados é
   proibido (C6).** `useQuery` para leitura, `useMutation` + `invalidateQueries` para escrita.
   Efeito só para sincronizar com sistema externo (DOM, timers, localStorage) — nunca para fetch.
-- **Transport:** as chamadas passam por `apiRequest`/`ApiError` (`lib/api.ts`); token via
-  `lib/auth.ts` (`agendamento.jwt`). React Query orquestra cache/estado por cima.
+- **Transport:** as chamadas passam por `apiRequest`/`ApiError` (`lib/api.ts`) com `credentials:
+  "include"`; a **sessão vive num cookie httpOnly** definido pela API (o JS não lê token). Logout =
+  `logout()` (`lib/auth.ts`) → `POST /auth/logout`. React Query orquestra cache/estado por cima.
 - **Estilo = só tokens.** Tailwind v4; cores via tokens do `app/globals.css` (`--background`,
   `--primary`, `--service-*`, `--status-*`, `--phase-*`…). **Hex hardcoded proibido.** Sem CSS
   global novo fora do `globals.css`.
