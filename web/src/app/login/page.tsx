@@ -97,6 +97,14 @@ export default function LoginPage() {
             autoComplete="current-password"
             required
           />
+          <div className="flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline"
+            >
+              Esqueci minha senha
+            </Link>
+          </div>
         </div>
 
         <Button type="submit" size="lg" className="group h-12 w-full rounded-full text-base" disabled={loading}>
