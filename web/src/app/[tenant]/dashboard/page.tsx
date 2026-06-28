@@ -74,7 +74,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-8">
+    <div className="space-y-6 p-6 lg:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Eyebrow className="mb-3">Indicadores</Eyebrow>

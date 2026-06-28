@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useTenant } from "@/components/tenant/tenant-context";
 import { Bento } from "@/components/ui/bento";
 import { WeekCard } from "@/components/tenant/horarios/week-card";
+import { WeekSummaryCard } from "@/components/tenant/horarios/week-summary-card";
 import { DayEditorCard } from "@/components/tenant/horarios/day-editor";
 import { OverridesCard } from "@/components/tenant/horarios/overrides-card";
 import { TriageSettingsCard } from "@/components/tenant/horarios/triage-card";
@@ -19,24 +20,34 @@ export default function HorariosPage() {
   const editorKey = `${selectedDay}:${current?.openTime ?? ""}:${current?.closeTime ?? ""}:${current?.isOff ?? false}:${current?.breaks.map((b) => b.id).join(",") ?? ""}`;
 
   return (
-    <div className="mx-auto max-w-7xl p-6 lg:p-8">
+    <div className="p-6 lg:p-8">
       <Bento>
-        <WeekCard className="h-fit lg:col-span-2 lg:row-span-2" selectedDay={selectedDay} onSelectDay={setSelectedDay} />
-        <DayEditorCard
-          key={editorKey}
-          className="h-fit lg:col-span-4"
-          dayOfWeek={selectedDay}
-          current={current}
-          allHours={hours}
-          onReload={reloadHours}
-        />
-        <OverridesCard className="h-fit lg:col-span-2" />
-        <TriageSettingsCard
-          key={`${settings.statusPromptAfterStartMin}-${settings.overdueAfterEndMin}`}
-          className="lg:col-span-2"
-          initial={settings}
-          onSaved={reloadSettings}
-        />
+        {/* Coluna esquerda (2/6): Semana + Resumo empilhados. O Resumo estica (flex-1)
+            p/ a coluna terminar alinhada com a direita quando esta for mais alta. */}
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          <WeekCard selectedDay={selectedDay} onSelectDay={setSelectedDay} />
+          <WeekSummaryCard className="flex-1" />
+        </div>
+
+        {/* Coluna direita (4/6): Editor do dia + (Exceções | Triagem). A linha de baixo
+            estica (flex-1 + auto-rows-fr) p/ preencher a sobra quando a esquerda for mais alta. */}
+        <div className="flex flex-col gap-4 lg:col-span-4">
+          <DayEditorCard
+            key={editorKey}
+            dayOfWeek={selectedDay}
+            current={current}
+            allHours={hours}
+            onReload={reloadHours}
+          />
+          <div className="grid flex-1 auto-rows-fr gap-4 sm:grid-cols-2">
+            <OverridesCard />
+            <TriageSettingsCard
+              key={`${settings.statusPromptAfterStartMin}-${settings.overdueAfterEndMin}`}
+              initial={settings}
+              onSaved={reloadSettings}
+            />
+          </div>
+        </div>
       </Bento>
     </div>
   );

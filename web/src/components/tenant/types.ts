@@ -12,6 +12,8 @@ export type MeResponse = {
 export type Service = {
   id: number;
   name: string;
+  description?: string | null;
+  imageUrl?: string | null;
   priceInCents: number;
   durationInMinutes: number;
   tenantId: number;

@@ -5,13 +5,17 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarOff, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { apiRequest, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/components/tenant/tenant-context";
 import { EmptyState } from "@/components/tenant/shared";
+import { paginate } from "@/lib/paginate";
+import { upcomingOverrides } from "./overrides-list";
 import type { BusinessDateOverride } from "@/components/tenant/types";
+
+const PAGE_SIZE = 5;
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,6 +39,7 @@ import {
 export function OverridesCard({ className }: { className?: string }) {
   const { overrides, reloadOverrides } = useTenant();
   const [editing, setEditing] = useState<BusinessDateOverride | null>(null);
+  const [page, setPage] = useState(1);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiRequest(`/overrides/${id}`, { method: "DELETE" }),
@@ -45,7 +50,10 @@ export function OverridesCard({ className }: { className?: string }) {
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao remover"),
   });
 
-  const sorted = [...overrides].sort((a, b) => a.date.localeCompare(b.date));
+  // Oculta exceções já vencidas (decisão 2026-06-19; ver overrides-list.ts) e pagina o resto.
+  const today = format(new Date(), "yyyy-MM-dd");
+  const upcoming = upcomingOverrides(overrides, today);
+  const { items, page: currentPage, pageCount } = paginate(upcoming, page, PAGE_SIZE);
 
   return (
     <Card className={className}>
@@ -53,76 +61,104 @@ export function OverridesCard({ className }: { className?: string }) {
         <CardTitle className="font-display text-xl tracking-wide">Exceções de data</CardTitle>
         <CardDescription>Feriados e dias com horário especial.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-1 flex-col gap-4">
         {/* Keyed por id (ou "new") → remonta com os valores certos ao entrar/sair de edição,
             sem useEffect de sync. */}
         <OverrideForm key={editing?.id ?? "new"} initial={editing} onDone={() => setEditing(null)} />
 
-        <div className="space-y-2 border-t pt-3">
-          {sorted.length === 0 ? (
-            <EmptyState icon={CalendarOff}>Nenhuma exceção cadastrada.</EmptyState>
+        <div className="flex flex-1 flex-col border-t pt-3">
+          {upcoming.length === 0 ? (
+            <EmptyState icon={CalendarOff}>Nenhuma exceção futura.</EmptyState>
           ) : (
-            sorted.map((o) => (
-              <div
-                key={o.id}
-                className={cn(
-                  "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm",
-                  editing?.id === o.id && "border-primary",
-                )}
-              >
-                <span className="min-w-0 truncate">
-                  <span className="font-mono">{format(new Date(`${o.date}T00:00:00`), "dd/MM/yyyy")}</span>
-                  <span className="text-muted-foreground">
-                    {" · "}
-                    {o.isOff || !o.openTime ? "Fechado" : `${o.openTime}–${o.closeTime}`}
+            <ul className="flex-1 space-y-2">
+              {items.map((o) => (
+                <li
+                  key={o.id}
+                  className={cn(
+                    "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm",
+                    editing?.id === o.id && "border-primary",
+                  )}
+                >
+                  <span className="min-w-0 truncate">
+                    <span className="font-mono">{format(new Date(`${o.date}T00:00:00`), "dd/MM/yyyy")}</span>
+                    <span className="text-muted-foreground">
+                      {" · "}
+                      {o.isOff || !o.openTime ? "Fechado" : `${o.openTime}–${o.closeTime}`}
+                    </span>
                   </span>
-                </span>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-muted-foreground hover:text-foreground"
-                    onClick={() => setEditing(o)}
-                    aria-label="Editar exceção"
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-muted-foreground hover:text-destructive"
-                        aria-label="Excluir exceção"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir exceção</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Remover a exceção dessa data? O dia volta ao horário normal da semana.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={() => {
-                            if (editing?.id === o.id) setEditing(null);
-                            deleteMutation.mutate(o.id);
-                          }}
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => setEditing(o)}
+                      aria-label="Editar exceção"
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="text-muted-foreground hover:text-destructive"
+                          aria-label="Excluir exceção"
                         >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            ))
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir exceção</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Remover a exceção dessa data? O dia volta ao horário normal da semana.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                              if (editing?.id === o.id) setEditing(null);
+                              deleteMutation.mutate(o.id);
+                            }}
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
+
+          {pageCount > 1 ? (
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                aria-label="Página anterior"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="text-muted-foreground font-mono text-xs">
+                Página {currentPage} de {pageCount}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPage(currentPage + 1)}
+                disabled={currentPage >= pageCount}
+                aria-label="Próxima página"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          ) : null}
         </div>
       </CardContent>
     </Card>

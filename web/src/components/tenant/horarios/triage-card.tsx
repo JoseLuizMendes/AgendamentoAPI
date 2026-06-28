@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { apiRequest, ApiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import type { TenantSettings } from "@/components/tenant/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,7 +56,7 @@ export function TriageSettingsCard({
           Quando cobrar a definição do status de um atendimento que já aconteceu.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-1 flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="prompt-min">Aguardando após o início (min)</Label>
@@ -89,7 +90,62 @@ export function TriageSettingsCard({
         <Button onClick={save} disabled={saveMutation.isPending} className="w-full sm:w-auto">
           {saveMutation.isPending ? "Salvando..." : "Salvar triagem"}
         </Button>
+
+        {/* Legenda das fases (espelha o ciclo de vida da agenda — phase.ts). Cores via tokens
+            --color-phase-*; descrições refletem os limiares acima em tempo real. */}
+        <div className="mt-auto space-y-2.5 border-t pt-4">
+          <p className="text-muted-foreground font-mono text-xs uppercase tracking-widest">
+            Fases do atendimento
+          </p>
+          <LegendRow dotClass="border border-foreground/40" label="Futuro" desc="ainda não começou" />
+          <LegendRow
+            color="var(--primary)"
+            label="Em andamento"
+            desc="começou, dentro da janela inicial"
+          />
+          <LegendRow
+            color="var(--color-phase-awaiting)"
+            label="Aguardando definição"
+            desc={`após ${promptMin || "0"} min do início`}
+          />
+          <LegendRow
+            color="var(--color-phase-overdue)"
+            label="Atrasado"
+            desc={`após ${overdueMin || "0"} min do fim sem resolução`}
+          />
+          <LegendRow
+            dotClass="bg-muted-foreground opacity-50"
+            label="Resolvido"
+            desc="status definido (concluído, faltou, cancelado)"
+          />
+        </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** Linha da legenda: bolinha colorida (token) + rótulo + descrição. */
+function LegendRow({
+  label,
+  desc,
+  color,
+  dotClass,
+}: {
+  label: string;
+  desc: string;
+  color?: string;
+  dotClass?: string;
+}) {
+  return (
+    <div className="flex items-start gap-2.5 text-sm">
+      <span
+        className={cn("mt-1.5 size-2.5 shrink-0 rounded-full", dotClass)}
+        style={color ? { backgroundColor: color } : undefined}
+      />
+      <span className="leading-snug">
+        <span className="font-medium">{label}</span>
+        <span className="text-muted-foreground"> — {desc}</span>
+      </span>
+    </div>
   );
 }
