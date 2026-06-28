@@ -27,6 +27,12 @@ clientes,servicos,horarios}`). Landing institucional em `components/landing`.
   global novo fora do `globals.css`.
 - **UI kit:** shadcn/ui (`components/ui`), sonner para toast, lucide para ícones (validar que o
   ícone existe na versão antes de usar).
+- **Observabilidade (erros):** crash de render é coberto pelas Error Boundaries do App Router
+  (`app/error.tsx`, `app/global-error.tsx`) — fallback amigável (só tokens), sem tela branca. Erros
+  globais (`window` error/`unhandledrejection`) vêm de `components/observability/client-error-listeners.tsx`
+  (montado no root `layout.tsx`). Tudo reporta via `lib/report-error.ts` (`reportClientError`): `fetch`
+  **fire-and-forget** para `POST /client-errors`, nunca lança, inclui `appVersion`
+  (`NEXT_PUBLIC_APP_VERSION`). **Não** usar `apiRequest` aqui (não pode acoplar auth nem propagar erro).
 - **a11y:** `focus-visible` em controles, `aria-pressed`/`aria-label` em toggles/icon-buttons,
   `prefers-reduced-motion` (usar `motion-reduce:*`) em animações.
 - **Hydration:** subtree que depende de token/localStorage só renderiza pós-mount (padrão do

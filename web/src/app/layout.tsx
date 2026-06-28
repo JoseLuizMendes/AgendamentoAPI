@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { QueryProvider } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
+import { ClientErrorListeners } from "@/components/observability/client-error-listeners";
 
 const bebas = Bebas_Neue({
   weight: "400",
@@ -38,6 +39,7 @@ export default function RootLayout({
       <body className={`${bebas.variable} ${ibmSans.variable} ${ibmMono.variable} font-sans antialiased`}>
         <QueryProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <ClientErrorListeners />
             {children}
             <Toaster richColors position="top-right" />
           </ThemeProvider>
