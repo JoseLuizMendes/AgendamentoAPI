@@ -60,7 +60,21 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
     },
     async (req, reply) => {
       const auth = requireAuth(req);
-      const service = await serviceService.createService(app.prisma, auth.tenantId, req.body);
+      const data: {
+        name: string;
+        description?: string | null;
+        imageUrl?: string | null;
+        priceInCents: number;
+        durationInMinutes: number;
+      } = {
+        name: req.body.name,
+        priceInCents: req.body.priceInCents,
+        durationInMinutes: req.body.durationInMinutes,
+      };
+      if (req.body.description !== undefined) data.description = req.body.description;
+      if (req.body.imageUrl !== undefined) data.imageUrl = req.body.imageUrl;
+
+      const service = await serviceService.createService(app.prisma, auth.tenantId, data);
       return reply.status(201).send(service);
     }
   );
@@ -81,10 +95,14 @@ export const servicesRoutes: FastifyPluginAsync = async (app) => {
       const auth = requireAuth(req);
       const data: {
         name?: string;
+        description?: string | null;
+        imageUrl?: string | null;
         priceInCents?: number;
         durationInMinutes?: number;
       } = {};
       if (req.body.name !== undefined) data.name = req.body.name;
+      if (req.body.description !== undefined) data.description = req.body.description;
+      if (req.body.imageUrl !== undefined) data.imageUrl = req.body.imageUrl;
       if (req.body.priceInCents !== undefined) data.priceInCents = req.body.priceInCents;
       if (req.body.durationInMinutes !== undefined) data.durationInMinutes = req.body.durationInMinutes;
 

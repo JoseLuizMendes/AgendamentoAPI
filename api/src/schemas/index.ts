@@ -33,12 +33,16 @@ export const UserParamsSchema = z.object({
 // Service schemas
 export const ServiceCreateSchema = z.object({
   name: z.string().min(1).max(200),
+  description: z.string().max(2000).nullish(),
+  imageUrl: z.string().url().max(500).nullish(),
   priceInCents: z.number().int().min(0),
   durationInMinutes: z.number().int().min(1).max(24 * 60),
 });
 
 export const ServiceUpdateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).nullish(),
+  imageUrl: z.string().url().max(500).nullish(),
   priceInCents: z.number().int().min(0).optional(),
   durationInMinutes: z.number().int().min(1).max(24 * 60).optional(),
 });
@@ -184,9 +188,20 @@ export const ErrorResponseSchema = z.object({
   message: z.string(),
 });
 
+export const UploadSignatureResponseSchema = z.object({
+  cloudName: z.string(),
+  apiKey: z.string(),
+  timestamp: z.number(),
+  signature: z.string(),
+  folder: z.string().optional(),
+  allowedFormats: z.string().optional(),
+});
+
 export const ServiceResponseSchema = z.object({
   id: z.number(),
   name: z.string(),
+  description: z.string().nullable(),
+  imageUrl: z.string().nullable(),
   priceInCents: z.number(),
   durationInMinutes: z.number(),
   tenantId: z.number(),

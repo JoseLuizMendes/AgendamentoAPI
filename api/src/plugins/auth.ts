@@ -43,6 +43,9 @@ const authPlugin: FastifyPluginAsync = async (app) => {
   // Register JWT
   await app.register(fastifyJwt, {
     secret: jwtSecret,
+    sign: {
+      expiresIn: config.jwtExpiresIn,
+    },
     cookie: {
       cookieName: "token",
       signed: false,

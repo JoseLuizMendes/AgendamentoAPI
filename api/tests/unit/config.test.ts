@@ -46,6 +46,16 @@ describe("config/loadConfig", () => {
     expect(cfg.corsOrigin).toBe("https://app.exemplo.com");
   });
 
+  it("expõe jwtExpiresIn com default '7d'", () => {
+    const cfg = loadConfig({ ...base, NODE_ENV: "development" });
+    expect(cfg.jwtExpiresIn).toBe("7d");
+  });
+
+  it("permite sobrescrever JWT_EXPIRES_IN", () => {
+    const cfg = loadConfig({ ...base, NODE_ENV: "development", JWT_EXPIRES_IN: "2h" });
+    expect(cfg.jwtExpiresIn).toBe("2h");
+  });
+
   it("converte números e booleanos de strings", () => {
     const cfg = loadConfig({
       ...base,
@@ -66,5 +76,33 @@ describe("config/loadConfig", () => {
 
   it("rejeita NODE_ENV inválido", () => {
     expect(() => loadConfig({ ...base, NODE_ENV: "staging" })).toThrow();
+  });
+
+  it("cloudinary: default de allowedFormats quando as credenciais estão presentes", () => {
+    const cfg = loadConfig({
+      ...base,
+      CLOUDINARY_CLOUD_NAME: "c",
+      CLOUDINARY_API_KEY: "k",
+      CLOUDINARY_API_SECRET: "s",
+    });
+    expect(cfg.cloudinary?.allowedFormats).toBe("jpg,png,webp");
+  });
+
+  it("cloudinary: null quando faltam credenciais", () => {
+    const cfg = loadConfig({ ...base });
+    expect(cfg.cloudinary).toBeNull();
+  });
+
+  it("cookieSameSite: default 'lax'", () => {
+    expect(loadConfig({ ...base }).cookieSameSite).toBe("lax");
+  });
+
+  it("cookieSameSite: aceita 'none' e 'strict'", () => {
+    expect(loadConfig({ ...base, COOKIE_SAMESITE: "none" }).cookieSameSite).toBe("none");
+    expect(loadConfig({ ...base, COOKIE_SAMESITE: "strict" }).cookieSameSite).toBe("strict");
+  });
+
+  it("cookieSameSite: rejeita valor inválido", () => {
+    expect(() => loadConfig({ ...base, COOKIE_SAMESITE: "frouxo" })).toThrow();
   });
 });

@@ -31,8 +31,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       // Set cookie
       reply.setCookie("token", token, {
         httpOnly: true,
-        secure: config.isProduction,
-        sameSite: "lax",
+        secure: config.cookieSecure,
+        sameSite: config.cookieSameSite,
         path: "/",
         maxAge: 60 * 60 * 24 * 7, // 7 days
       });
@@ -49,6 +49,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   zApp.post(
     "/auth/login",
     {
+      config: {
+        // Rate limit reforçado contra brute force de senha (espelha o booking público).
+        rateLimit: { max: 10, timeWindow: "1 minute" },
+      },
       schema: {
         tags: ["Auth"],
         body: LoginSchema,
@@ -68,8 +72,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       // Set cookie
       reply.setCookie("token", token, {
         httpOnly: true,
-        secure: config.isProduction,
-        sameSite: "lax",
+        secure: config.cookieSecure,
+        sameSite: config.cookieSameSite,
         path: "/",
         maxAge: 60 * 60 * 24 * 7, // 7 days
       });

@@ -14,15 +14,24 @@ const EnvSchema = z
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     DATABASE_URL: z.string().min(1).optional(),
     JWT_SECRET: z.string().optional(),
+    JWT_EXPIRES_IN: z.string().min(1).default("7d"),
     PORT: z.coerce.number().int().positive().default(3000),
     HOST: z.string().min(1).default("0.0.0.0"),
     CORS_ORIGIN: z.string().min(1).default("http://localhost:3001"),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
     RATE_LIMIT_WINDOW: z.string().min(1).default("1 minute"),
+    // Cookie de auth: "lax" p/ mesma-site (subdomínios/reverse proxy); "none" p/ cross-site
+    // (força secure). Ajustável por deploy sem mexer no código.
+    COOKIE_SAMESITE: z.enum(["lax", "strict", "none"]).default("lax"),
     PUBLIC_HEALTH: z
       .string()
       .optional()
       .transform((v) => v !== "false"), // default true; só "false" desliga
+    CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
+    CLOUDINARY_API_KEY: z.string().min(1).optional(),
+    CLOUDINARY_API_SECRET: z.string().min(1).optional(),
+    CLOUDINARY_UPLOAD_FOLDER: z.string().min(1).optional(),
+    CLOUDINARY_ALLOWED_FORMATS: z.string().min(1).default("jpg,png,webp"),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production") {
@@ -41,12 +50,22 @@ export type Config = {
   isProduction: boolean;
   databaseUrl: string | undefined;
   jwtSecret: string;
+  jwtExpiresIn: string;
   port: number;
   host: string;
   corsOrigin: string;
   rateLimitMax: number;
   rateLimitWindow: string;
+  cookieSameSite: "lax" | "strict" | "none";
+  cookieSecure: boolean;
   publicHealth: boolean;
+  cloudinary: {
+    cloudName: string;
+    apiKey: string;
+    apiSecret: string;
+    uploadFolder?: string;
+    allowedFormats: string;
+  } | null;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -61,17 +80,33 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
   const e = parsed.data;
 
+  const cloudinary =
+    e.CLOUDINARY_CLOUD_NAME && e.CLOUDINARY_API_KEY && e.CLOUDINARY_API_SECRET
+      ? {
+          cloudName: e.CLOUDINARY_CLOUD_NAME,
+          apiKey: e.CLOUDINARY_API_KEY,
+          apiSecret: e.CLOUDINARY_API_SECRET,
+          allowedFormats: e.CLOUDINARY_ALLOWED_FORMATS,
+          ...(e.CLOUDINARY_UPLOAD_FOLDER ? { uploadFolder: e.CLOUDINARY_UPLOAD_FOLDER } : {}),
+        }
+      : null;
+
   return {
     nodeEnv: e.NODE_ENV,
     isProduction: e.NODE_ENV === "production",
     databaseUrl: e.DATABASE_URL,
     jwtSecret: e.JWT_SECRET ?? DEV_JWT_FALLBACK,
+    jwtExpiresIn: e.JWT_EXPIRES_IN,
     port: e.PORT,
     host: e.HOST,
     corsOrigin: e.CORS_ORIGIN,
     rateLimitMax: e.RATE_LIMIT_MAX,
     rateLimitWindow: e.RATE_LIMIT_WINDOW,
+    cookieSameSite: e.COOKIE_SAMESITE,
+    // SameSite=None exige Secure (regra do browser); em prod sempre Secure.
+    cookieSecure: e.NODE_ENV === "production" || e.COOKIE_SAMESITE === "none",
     publicHealth: e.PUBLIC_HEALTH,
+    cloudinary,
   };
 }
 

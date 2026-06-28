@@ -18,12 +18,16 @@ import { overridesRoutes } from "./routes/overrides.js";
 import { appointmentsRoutes } from "./routes/appointments.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { reportsRoutes } from "./routes/reports.js";
+import { uploadsRoutes } from "./routes/uploads.js";
 import { publicRoutes } from "./routes/public.js";
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from "fastify-type-provider-zod";
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: true,
+    logger: {
+      // Defense-in-depth: nunca vazar credenciais nos logs, mesmo que algum log inclua headers.
+      redact: ["req.headers.authorization", "req.headers.cookie", "res.headers['set-cookie']"],
+    },
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
@@ -79,6 +83,13 @@ export async function buildApp(): Promise<FastifyInstance> {
       }
       req.log.error({ err }, "Prisma error");
       return reply.status(500).send({ message: "Internal Server Error" });
+    }
+
+    // Erros HTTP que já carregam status próprio (ex.: rate limit 429, erros nativos do Fastify).
+    // Sem isso, o handler abaixo os mascararia como 500 — quebrando o rate limit reforçado.
+    const status = typeof anyErr?.statusCode === "number" ? anyErr.statusCode : undefined;
+    if (status && status >= 400 && status < 500) {
+      return reply.status(status).send({ message: anyErr.message ?? "Requisição inválida" });
     }
 
     req.log.error({ err }, "Unhandled error");
@@ -148,6 +159,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(appointmentsRoutes);
   await app.register(settingsRoutes);
   await app.register(reportsRoutes);
+  await app.register(uploadsRoutes);
   await app.register(publicRoutes);
 
   return app;

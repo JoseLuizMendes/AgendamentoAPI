@@ -60,6 +60,8 @@ model User {
 model Service {
   id                Int           @id @default(autoincrement())
   name              String
+  description       String?
+  imageUrl          String?
   priceInCents      Int
   durationInMinutes Int
   tenantId          Int

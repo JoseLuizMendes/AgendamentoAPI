@@ -10,6 +10,7 @@ escopo: "Camada de apresentação HTTP (Fastify) — rotas finas"
 ## Escopo do Diretório
 
 Plugins de rota Fastify registrados em `src/app.ts`: `auth`, `users`, `services`, `hours`,
+`uploads` (assinatura de upload Cloudinary — `GET /uploads/signature`),
 `overrides`, `appointments`, `settings`, `reports`, `public`, `health`.
 
 ## Diretrizes Específicas
