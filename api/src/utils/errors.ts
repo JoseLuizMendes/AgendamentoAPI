@@ -35,3 +35,10 @@ export class UnauthorizedError extends AppError {
     this.name = "UnauthorizedError";
   }
 }
+
+export class TooManyRequestsError extends AppError {
+  constructor(message: string = "Muitas tentativas. Tente novamente mais tarde.") {
+    super(message, 429);
+    this.name = "TooManyRequestsError";
+  }
+}

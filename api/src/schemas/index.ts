@@ -15,6 +15,26 @@ export const LoginSchema = z.object({
   tenantSlug: z.string().min(1),
 });
 
+// Ciclo de conta por email (verificação + reset de senha)
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email(),
+  tenantSlug: z.string().min(1),
+});
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
+});
+
+export const VerifyEmailSchema = z.object({
+  token: z.string().min(1),
+});
+
+export const RequestVerificationSchema = z.object({
+  email: z.string().email(),
+  tenantSlug: z.string().min(1),
+});
+
 // User schemas
 export const UserCreateSchema = z.object({
   email: z.string().email(),
@@ -183,6 +203,17 @@ export const PublicAppointmentCreateSchema = z.object({
   startTime: z.string().datetime(),
 });
 
+// Client error report (POST /client-errors — observabilidade caseira, sem persistência)
+export const ClientErrorSchema = z.object({
+  message: z.string().min(1).max(2000),
+  stack: z.string().max(10000).optional(),
+  componentStack: z.string().max(10000).optional(),
+  url: z.string().max(2000).optional(),
+  userAgent: z.string().max(500).optional(),
+  appVersion: z.string().max(100).optional(),
+  kind: z.enum(["render", "unhandled", "rejection"]).optional(),
+});
+
 // Response schemas
 export const ErrorResponseSchema = z.object({
   message: z.string(),
@@ -307,3 +338,4 @@ export type BusinessHoursCreate = z.infer<typeof BusinessHoursCreateSchema>;
 export type BusinessHoursUpdate = z.infer<typeof BusinessHoursUpdateSchema>;
 export type OverrideCreate = z.infer<typeof OverrideCreateSchema>;
 export type OverrideUpdate = z.infer<typeof OverrideUpdateSchema>;
+export type ClientError = z.infer<typeof ClientErrorSchema>;

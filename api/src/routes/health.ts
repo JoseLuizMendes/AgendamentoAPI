@@ -3,10 +3,11 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 export const healthRoutes: FastifyPluginAsync = async (app) => {
   const zApp = app.withTypeProvider<ZodTypeProvider>();
-  zApp.get("/health/live", 
+  zApp.get("/health/live",
     {
       schema:{
-        tags:["Raiz"]
+        tags:["Raiz"],
+        security: [], // pública
       }
     }, async () => {
     return { status: "ok" };
@@ -15,7 +16,8 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
   zApp.get("/health/ready",
     {
       schema:{
-        tags:["Raiz"]
+        tags:["Raiz"],
+        security: [], // pública
       }
     },
      async () => {

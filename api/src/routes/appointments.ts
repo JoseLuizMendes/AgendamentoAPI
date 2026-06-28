@@ -13,6 +13,7 @@ import {
 } from "../schemas/index.js";
 import * as appointmentService from "../services/appointments.js";
 import { getAvailableSlots } from "../services/availability.js";
+import { createAppointmentIdempotent, readIdempotencyKey } from "../services/idempotency.js";
 import { requireAuth } from "../utils/guards.js";
 
 export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
@@ -113,11 +114,8 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       const auth = requireAuth(req);
       const body = req.body;
-      const appointment = await appointmentService.createAppointment(
-        app.prisma,
-        auth.tenantId,
-        auth.userId,
-        {
+      const create = () =>
+        appointmentService.createAppointment(app.prisma, auth.tenantId, auth.userId, {
           customerName: body.customerName,
           customerPhone: body.customerPhone,
           customerEmail: body.customerEmail,
@@ -125,8 +123,11 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
           serviceId: body.serviceId,
           startTime: new Date(body.startTime),
           endTime: body.endTime ? new Date(body.endTime) : undefined,
-        }
-      );
+        });
+      const idemKey = readIdempotencyKey(req.headers["idempotency-key"]);
+      const appointment = idemKey
+        ? await createAppointmentIdempotent(app.prisma, auth.tenantId, idemKey, create)
+        : await create();
       return reply.status(201).send(appointment);
     }
   );

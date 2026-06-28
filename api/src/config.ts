@@ -20,6 +20,9 @@ const EnvSchema = z
     CORS_ORIGIN: z.string().min(1).default("http://localhost:3001"),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
     RATE_LIMIT_WINDOW: z.string().min(1).default("1 minute"),
+    // Lockout de conta (anti-brute-force): nº de falhas até bloquear e duração do bloqueio (min).
+    LOGIN_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+    LOGIN_LOCK_MINUTES: z.coerce.number().int().positive().default(15),
     // Cookie de auth: "lax" p/ mesma-site (subdomínios/reverse proxy); "none" p/ cross-site
     // (força secure). Ajustável por deploy sem mexer no código.
     COOKIE_SAMESITE: z.enum(["lax", "strict", "none"]).default("lax"),
@@ -32,6 +35,11 @@ const EnvSchema = z
     CLOUDINARY_API_SECRET: z.string().min(1).optional(),
     CLOUDINARY_UPLOAD_FOLDER: z.string().min(1).optional(),
     CLOUDINARY_ALLOWED_FORMATS: z.string().min(1).default("jpg,png,webp"),
+    // Email transacional (Resend). Sem chave → modo dev: o link é logado em vez de enviado.
+    RESEND_API_KEY: z.string().min(1).optional(),
+    RESEND_FROM: z.string().min(1).optional(),
+    // Base do app web — monta os links de verificação/reset enviados por email.
+    APP_BASE_URL: z.string().url().default("http://localhost:3001"),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production") {
@@ -56,9 +64,13 @@ export type Config = {
   corsOrigin: string;
   rateLimitMax: number;
   rateLimitWindow: string;
+  loginMaxAttempts: number;
+  loginLockMinutes: number;
   cookieSameSite: "lax" | "strict" | "none";
   cookieSecure: boolean;
   publicHealth: boolean;
+  appBaseUrl: string;
+  resend: { apiKey: string; from: string } | null;
   cloudinary: {
     cloudName: string;
     apiKey: string;
@@ -79,6 +91,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
 
   const e = parsed.data;
+
+  const resend =
+    e.RESEND_API_KEY && e.RESEND_FROM ? { apiKey: e.RESEND_API_KEY, from: e.RESEND_FROM } : null;
 
   const cloudinary =
     e.CLOUDINARY_CLOUD_NAME && e.CLOUDINARY_API_KEY && e.CLOUDINARY_API_SECRET
@@ -102,10 +117,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     corsOrigin: e.CORS_ORIGIN,
     rateLimitMax: e.RATE_LIMIT_MAX,
     rateLimitWindow: e.RATE_LIMIT_WINDOW,
+    loginMaxAttempts: e.LOGIN_MAX_ATTEMPTS,
+    loginLockMinutes: e.LOGIN_LOCK_MINUTES,
     cookieSameSite: e.COOKIE_SAMESITE,
     // SameSite=None exige Secure (regra do browser); em prod sempre Secure.
     cookieSecure: e.NODE_ENV === "production" || e.COOKIE_SAMESITE === "none",
     publicHealth: e.PUBLIC_HEALTH,
+    appBaseUrl: e.APP_BASE_URL,
+    resend,
     cloudinary,
   };
 }
