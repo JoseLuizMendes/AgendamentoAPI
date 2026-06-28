@@ -25,7 +25,7 @@ description: "Task list — Observabilidade de Frontend (caseira)"
 
 **Purpose**: configuração compartilhada mínima.
 
-- [ ] T001 [P] Adicionar `NEXT_PUBLIC_APP_VERSION` em `web/.env.local` (ex.: short SHA do deploy) e registrar a var no deploy (`.specify/memory/project-context.md` §9) — usada como `appVersion` nos reports.
+- [X] T001 [P] Adicionar `NEXT_PUBLIC_APP_VERSION` em `web/.env.local` (ex.: short SHA do deploy) e registrar a var no deploy (`.specify/memory/project-context.md` §9) — usada como `appVersion` nos reports.
 
 ---
 
@@ -45,9 +45,9 @@ description: "Task list — Observabilidade de Frontend (caseira)"
 
 ### Implementation for User Story 1
 
-- [ ] T002 [P] [US1] Criar `web/src/app/error.tsx` (`"use client"`, props `{ error, reset }`): fallback amigável com tokens (sem hex) + botão que chama `reset()`. Sem reporte ainda.
-- [ ] T003 [P] [US1] Criar `web/src/app/global-error.tsx` (`"use client"`, renderiza próprio `<html><body>`): fallback do root layout + botão recarregar.
-- [ ] T004 [US1] Verificar US1: `pnpm -C web exec tsc --noEmit` + `pnpm -C web lint`; teste manual (forçar erro numa rota → fallback; root → global-error). (depende T002, T003)
+- [X] T002 [P] [US1] Criar `web/src/app/error.tsx` (`"use client"`, props `{ error, reset }`): fallback amigável com tokens (sem hex) + botão que chama `reset()`. Sem reporte ainda.
+- [X] T003 [P] [US1] Criar `web/src/app/global-error.tsx` (`"use client"`, renderiza próprio `<html><body>`): fallback do root layout + botão recarregar.
+- [X] T004 [US1] Verificar US1: `pnpm -C web exec tsc --noEmit` + `pnpm -C web lint`; teste manual (forçar erro numa rota → fallback; root → global-error). (depende T002, T003)
 
 **Checkpoint**: US1 funcional e testável sozinha (MVP — já elimina o white-screen).
 
@@ -61,19 +61,19 @@ description: "Task list — Observabilidade de Frontend (caseira)"
 
 ### Tests for User Story 2 (TDD — escrever PRIMEIRO, devem FALHAR) ⚠️
 
-- [ ] T005 [P] [US2] Teste do endpoint em `api/tests/unit/client-errors.test.ts` (via `app.inject`, sem DB): body válido → 204; sem `message` → 400; 31ª req no IP → 429. (espelha `api/tests/unit/login-rate-limit.test.ts` para o 429)
-- [ ] T006 [P] [US2] Teste do reporter em `web/src/lib/report-error.test.ts` (Vitest, mock de `fetch`): faz `POST /client-errors` com o shape do contrato; **engole** rejeição de rede sem propagar.
+- [X] T005 [P] [US2] Teste do endpoint em `api/tests/unit/client-errors.test.ts` (via `app.inject`, sem DB): body válido → 204; sem `message` → 400; 31ª req no IP → 429. (espelha `api/tests/unit/login-rate-limit.test.ts` para o 429)
+- [X] T006 [P] [US2] Teste do reporter em `web/src/lib/report-error.test.ts` (Vitest, mock de `fetch`): faz `POST /client-errors` com o shape do contrato; **engole** rejeição de rede sem propagar.
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Adicionar `ClientErrorSchema` (+ `z.infer`) em `api/src/schemas/index.ts` conforme `data-model.md` (`message` obrigatório; `stack`/`componentStack`/`url`/`userAgent`/`appVersion`/`kind` opcionais com máximos; `kind` enum). (faz parte de T005 passar)
-- [ ] T008 [US2] Criar `api/src/routes/client-errors.ts` (`POST /client-errors` público, `config.rateLimit { max: 30, timeWindow: "1 minute" }`, valida com `ClientErrorSchema`, `req.log.error({ clientError, ip }, "client error")`, responde 204). (depende T007)
-- [ ] T009 [US2] Registrar `clientErrorsRoutes` em `api/src/app.ts` e adicionar `"/client-errors"` à allowlist pública em `api/src/plugins/auth.ts`. (depende T008; faz T005 ficar verde)
-- [ ] T010 [US2] Implementar `web/src/lib/report-error.ts` — `reportClientError(payload)`: `fetch` fire-and-forget para `${NEXT_PUBLIC_API_URL}/client-errors`, `try/catch` silencioso (nunca lança), inclui `appVersion`, guarda contra loop. (faz T006 ficar verde)
-- [ ] T011 [P] [US2] Criar `web/src/components/observability/client-error-listeners.tsx` (`"use client"`): `useEffect` registra `window.addEventListener("error"|"unhandledrejection")` → `reportClientError({ kind: "unhandled"|"rejection" })`; cleanup no unmount. (depende T010)
-- [ ] T012 [US2] Montar `<ClientErrorListeners/>` no `web/src/app/layout.tsx`. (depende T011)
-- [ ] T013 [US2] Ligar as boundaries ao reporter: em `web/src/app/error.tsx` e `global-error.tsx`, `useEffect` chama `reportClientError({ message, stack, componentStack, kind: "render" })`. (depende T010 + T002/T003)
-- [ ] T014 [US2] Verificar US2: `pnpm -C api test` (client-errors verde) + `pnpm -C api exec tsc -p tsconfig.json --noEmit` + `pnpm -C web test` (report-error verde) + `pnpm -C web exec tsc --noEmit` + `pnpm -C web lint`.
+- [X] T007 [US2] Adicionar `ClientErrorSchema` (+ `z.infer`) em `api/src/schemas/index.ts` conforme `data-model.md` (`message` obrigatório; `stack`/`componentStack`/`url`/`userAgent`/`appVersion`/`kind` opcionais com máximos; `kind` enum). (faz parte de T005 passar)
+- [X] T008 [US2] Criar `api/src/routes/client-errors.ts` (`POST /client-errors` público, `config.rateLimit { max: 30, timeWindow: "1 minute" }`, valida com `ClientErrorSchema`, `req.log.error({ clientError, ip }, "client error")`, responde 204). (depende T007)
+- [X] T009 [US2] Registrar `clientErrorsRoutes` em `api/src/app.ts` e adicionar `"/client-errors"` à allowlist pública em `api/src/plugins/auth.ts`. (depende T008; faz T005 ficar verde)
+- [X] T010 [US2] Implementar `web/src/lib/report-error.ts` — `reportClientError(payload)`: `fetch` fire-and-forget para `${NEXT_PUBLIC_API_URL}/client-errors`, `try/catch` silencioso (nunca lança), inclui `appVersion`, guarda contra loop. (faz T006 ficar verde)
+- [X] T011 [P] [US2] Criar `web/src/components/observability/client-error-listeners.tsx` (`"use client"`): `useEffect` registra `window.addEventListener("error"|"unhandledrejection")` → `reportClientError({ kind: "unhandled"|"rejection" })`; cleanup no unmount. (depende T010)
+- [X] T012 [US2] Montar `<ClientErrorListeners/>` no `web/src/app/layout.tsx`. (depende T011)
+- [X] T013 [US2] Ligar as boundaries ao reporter: em `web/src/app/error.tsx` e `global-error.tsx`, `useEffect` chama `reportClientError({ message, stack, componentStack, kind: "render" })`. (depende T010 + T002/T003)
+- [X] T014 [US2] Verificar US2: `pnpm -C api test` (client-errors verde) + `pnpm -C api exec tsc -p tsconfig.json --noEmit` + `pnpm -C web test` (report-error verde) + `pnpm -C web exec tsc --noEmit` + `pnpm -C web lint`.
 
 **Checkpoint**: US1 e US2 funcionam de forma independente.
 
@@ -81,8 +81,8 @@ description: "Task list — Observabilidade de Frontend (caseira)"
 
 ## Phase 5: Polish & Cross-Cutting
 
-- [ ] T015 [P] Docs: atualizar `web/CLAUDE.md` (transport/observabilidade) e `.specify/memory/project-context.md` (endpoint `/client-errors` + `NEXT_PUBLIC_APP_VERSION`).
-- [ ] T016 Rodar `quickstart.md`: `curl` → 204 + linha de log; forçar erro no navegador → log com `appVersion` (`kind` render/rejection).
+- [X] T015 [P] Docs: atualizar `web/CLAUDE.md` (transport/observabilidade) e `.specify/memory/project-context.md` (endpoint `/client-errors` + `NEXT_PUBLIC_APP_VERSION`).
+- [X] T016 Rodar `quickstart.md`: `curl` → 204 + linha de log; forçar erro no navegador → log com `appVersion` (`kind` render/rejection).
 
 ---
 

@@ -176,9 +176,9 @@ são apenas os **não-fetch** (`setMounted`, `theme-toggle`, `hero`) — qualque
 - _(novas exceções entram aqui, com data e justificativa, via C6)_
 
 <!-- SPECKIT START -->
-Feature ativa: **Redesign do Dashboard** — plano em
-`specs/002-dashboard-redesign/plan.md` (+ `research.md`, `data-model.md`,
-`contracts/`, `quickstart.md`). Outra feature pronta: `specs/001-observabilidade-frontend`
-(spec→plan→tasks; falta `/speckit-implement`). Princípios:
-`.specify/memory/constitution.md`; contexto: `.specify/memory/project-context.md`.
+Feature ativa: **Segurança & Hardening** — `specs/003-seguranca-hardening/` ([spec](specs/003-seguranca-hardening/spec.md) + [plan](specs/003-seguranca-hardening/plan.md)). Fases 1a–2 **implementadas e verdes**:
+anti-brute-force (timing fix + lockout), hardening (bodyLimit/idempotency/`pnpm audit`) e ciclo de
+conta por email (verificação + reset via Resend). Features anteriores prontas:
+`specs/001-observabilidade-frontend` (implementada) e `specs/002-dashboard-redesign`. Princípios:
+`.specify/memory/constitution.md`; contexto/mapa: `.specify/memory/project-context.md`.
 <!-- SPECKIT END -->
