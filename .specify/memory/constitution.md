@@ -62,7 +62,9 @@ em `specs/` (isolados do código); `CLAUDE.md` por pasta é contexto local que a
 | Package manager | pnpm | npm/yarn/bun banidos. |
 
 Exceções aprovadas vivem aqui e no `CLAUDE.md` raiz (ex.: backend Fastify puro em vez de NestJS;
-Vitest ligado no `web` para lógica pura de UI).
+Vitest ligado no `web` para lógica pura de UI; **Apache ECharts** no gráfico "Movimento financeiro"
+do dashboard — zoom wheel/pinça nativo via `dataZoom: inside`, 2026-06-28; Recharts segue padrão no
+restante).
 
 ## Quality Gates & Workflow
 

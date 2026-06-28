@@ -168,9 +168,17 @@ são apenas os **não-fetch** (`setMounted`, `theme-toggle`, `hero`) — qualque
   removido. Canon de UI volta a **Radix puro** (`@radix-ui/react-*` ou o meta-pacote `radix-ui`).
 - **Vitest ligado no `web`** — 2026-06-15. O `web` passou a ter unit-test runner (Vitest, já no
   canon) para lógica pura de UI (ex.: `availability.ts` da agenda). `pnpm -C web test`.
+- **Gráficos: Apache ECharts (`echarts`) no dashboard** — 2026-06-28, aprovado pelo dev. Recharts não
+  faz zoom por scroll/pinça nativo; o ECharts tem `dataZoom: { type: 'inside' }` (wheel + pinça de
+  fábrica). Escopo: o gráfico combinado "Movimento financeiro" (receita + agendamentos, eixo duplo).
+  **Recharts segue como padrão** nos demais gráficos; imports modulares (`echarts/core` + `use`),
+  cores via tokens lidos do CSS (`getComputedStyle`), tema re-aplicado no toggle claro/escuro.
 - _(novas exceções entram aqui, com data e justificativa, via C6)_
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+Feature ativa: **Redesign do Dashboard** — plano em
+`specs/002-dashboard-redesign/plan.md` (+ `research.md`, `data-model.md`,
+`contracts/`, `quickstart.md`). Outra feature pronta: `specs/001-observabilidade-frontend`
+(spec→plan→tasks; falta `/speckit-implement`). Princípios:
+`.specify/memory/constitution.md`; contexto: `.specify/memory/project-context.md`.
 <!-- SPECKIT END -->
