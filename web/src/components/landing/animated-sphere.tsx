@@ -36,7 +36,9 @@ export function AnimatedSphere() {
 
       const centerX = rect.width / 2;
       const centerY = rect.height / 2;
-      const radius = Math.min(rect.width, rect.height) * 0.525;
+      // Mantém o raio < metade do canvas para a esfera nunca ser recortada nas bordas
+      // (com folga para a largura do glifo) → círculo 100% fechado, sem "mordida".
+      const radius = Math.min(rect.width, rect.height) * 0.46;
 
       ctx.font = "12px monospace";
       ctx.textAlign = "center";
@@ -100,7 +102,7 @@ export function AnimatedSphere() {
     <canvas
       ref={canvasRef}
       className="w-full h-full text-foreground"
-      style={{ display: "block" }}
+      style={{ display: "inline" }}
     />
   );
 }
