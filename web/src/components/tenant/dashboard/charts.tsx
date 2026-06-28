@@ -85,9 +85,15 @@ function ChartBox({
   );
 }
 
-export function RevenueArea({ data }: { data: { label: string; revenueInCents: number }[] }) {
+export function RevenueArea({
+  data,
+  height = 200,
+}: {
+  data: { label: string; revenueInCents: number }[];
+  height?: number;
+}) {
   return (
-    <ChartBox height={240}>
+    <ChartBox height={height}>
       {(w, h) => (
         <AreaChart width={w} height={h} data={data} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.1} />
@@ -116,15 +122,17 @@ export function CountBars({
   name,
   fill = false,
   maxBarSize = 40,
+  height = 200,
 }: {
   data: Array<Record<string, number | string>>;
   dataKey: string;
   name: string;
   fill?: boolean;
   maxBarSize?: number;
+  height?: number;
 }) {
   return (
-    <ChartBox height={240} fill={fill}>
+    <ChartBox height={height} fill={fill}>
       {(w, h) => (
         <BarChart width={w} height={h} data={data} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.1} />
@@ -164,9 +172,9 @@ function peakValueLabel(peakIndex: number) {
  * Grid horizontal sutil + baseline no zero dão referência de leitura; o pico ganha cor cheia
  * e rótulo de valor, enquanto as demais ficam atenuadas. Rótulos do eixo X auto-afinam (minTickGap).
  */
-export function HighlightBars({ data, peakIndex }: { data: Array<{ label: string; value: number }>; peakIndex: number }) {
+export function HighlightBars({ data, peakIndex, height = 200 }: { data: Array<{ label: string; value: number }>; peakIndex: number; height?: number }) {
   return (
-    <ChartBox height={220}>
+    <ChartBox height={height}>
       {(w, h) => (
         <BarChart width={w} height={h} data={data} margin={{ top: 20, right: 8, left: 8, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.08} />

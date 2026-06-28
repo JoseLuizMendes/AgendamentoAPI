@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -14,19 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KpiCard } from "@/components/tenant/dashboard/kpi-card";
-import { CountBars, HighlightBars, RevenueArea } from "@/components/tenant/dashboard/charts";
+import { FinanceChart } from "@/components/tenant/dashboard/finance-chart";
+import { MovementCard } from "@/components/tenant/dashboard/movement-card";
+import { RetentionKpis } from "@/components/tenant/dashboard/retention-kpis";
 import { StatusFunnel } from "@/components/tenant/dashboard/status-funnel";
 import { downloadSummaryCsv } from "@/components/tenant/dashboard/export";
 import { deltaPct, PERIODS, periodRange, type PeriodKey } from "@/components/tenant/dashboard/periods";
 import type { ReportSummary } from "@/components/tenant/dashboard/types";
-
-const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
-function argmax(arr: number[]): number {
-  let best = 0;
-  for (let i = 1; i < arr.length; i++) if ((arr[i] ?? 0) > (arr[best] ?? 0)) best = i;
-  return best;
-}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -51,18 +45,6 @@ export default function DashboardPage() {
     if (error instanceof ApiError && error.status === 401) router.replace("/login");
     else toast.error(error instanceof ApiError ? error.message : "Erro ao carregar indicadores");
   }, [error, router]);
-
-  const weekdayData = useMemo(
-    () => (summary?.byWeekday ?? []).map((v, i) => ({ label: WEEKDAYS[i] ?? String(i), value: v })),
-    [summary],
-  );
-  const hourData = useMemo(
-    () =>
-      (summary?.byHour ?? [])
-        .map((v, h) => ({ label: `${h}h`, value: v, h }))
-        .filter((d) => d.h >= 6 && d.h <= 22),
-    [summary],
-  );
 
   const c = summary?.current;
   const p = summary?.previous;
@@ -130,22 +112,13 @@ export default function DashboardPage() {
             </EmptyState>
           ) : (
           <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-xl tracking-wide">Receita no período</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RevenueArea data={summary.series} />
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+          <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
             <Card>
               <CardHeader>
-                <CardTitle className="font-display text-xl tracking-wide">Agendamentos</CardTitle>
+                <CardTitle className="font-display text-xl tracking-wide">Movimento financeiro</CardTitle>
               </CardHeader>
               <CardContent>
-                <CountBars data={summary.series} dataKey="appointments" name="Agendamentos" />
+                <FinanceChart data={summary.series} />
               </CardContent>
             </Card>
 
@@ -179,6 +152,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
+            <MovementCard byWeekday={summary.byWeekday} byHour={summary.byHour} />
             <Card>
               <CardHeader>
                 <CardTitle className="font-display text-xl tracking-wide">Funil de status</CardTitle>
@@ -187,27 +161,9 @@ export default function DashboardPage() {
                 <StatusFunnel byStatus={c.byStatus} />
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-display text-xl tracking-wide">Movimento por dia</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <HighlightBars data={weekdayData} peakIndex={argmax(summary.byWeekday)} />
-              </CardContent>
-            </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-xl tracking-wide">Movimento por hora</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <HighlightBars
-                data={hourData}
-                peakIndex={hourData.findIndex((d) => d.h === argmax(summary.byHour))}
-              />
-            </CardContent>
-          </Card>
+          <RetentionKpis current={c} previous={p} />
           </>
           )}
         </>

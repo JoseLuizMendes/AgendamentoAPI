@@ -9,8 +9,14 @@ escopo: "Indicadores e gráficos do dashboard (Recharts)"
 
 ## Escopo
 
-`charts` (área/barras Recharts), `kpi-card`, `status-funnel`, `periods` (presets de período +
-deltas), `export` (CSV), `types` (espelha `GET /reports/summary`).
+`charts` (área/barras Recharts; altura via prop `height`, default compacto),
+`finance-chart` (**ECharts** — exceção C6 registrada na raiz/constitution — gráfico "Movimento
+financeiro": agendamentos em barras + receita em linha, eixo duplo, zoom wheel/pinça via
+`dataZoom: inside`; cores lidas dos tokens CSS, re-aplicadas no toggle de tema), `kpi-card`,
+`movement-card` (movimento num card só, abas "Por dia da semana | Por hora" via shadcn `Tabs`,
+reusa `HighlightBars`), `retention-kpis` (cancelamento + novos vs recorrentes, via `KpiCard`),
+`metrics` (lógica pura testável: `clientSplit`, `formatRate`), `status-funnel`, `periods` (presets
+de período + `deltaPct`), `export` (CSV), `types` (espelha `GET /reports/summary`).
 
 ## Diretrizes
 
@@ -22,6 +28,10 @@ deltas), `export` (CSV), `types` (espelha `GET /reports/summary`).
   `/reports` mudar (ex.: `byStatus`).
 - `periods.ts` é a fonte dos intervalos/buckets e do `deltaPct`. Cálculo de data no `queryFn` (não no
   render) p/ não chamar `new Date()` impuro durante a renderização.
+- **Movimento = um card só** (`movement-card`): abas trocam a dimensão (dia/hora) por estado do
+  `Tabs` (sem refetch); o filtro de período do topo continua mandando no intervalo.
+- **Densidade > gráfico inflado** (`retention-kpis`): preferir KPIs (valor + `deltaPct`) a gráficos
+  grandes/vazios. No-show já é KPI do topo — não duplicar. Lógica pura em `metrics.ts` (testada).
 
 ## Referências
 - `../CLAUDE.md` (tenant) · raiz · `types.ts`
