@@ -7,6 +7,13 @@
 > **Boot obrigatório:** antes de qualquer trabalho substantivo, leia (1) este arquivo e
 > (2) o `CLAUDE.md` da subpasta em que você vai mexer (`api/`, `api/src/services/`,
 > `api/src/routes/`, `web/`, `web/src/components/tenant/`). Sem isso, **não** comece.
+>
+> **Spec Kit (fonte de princípios + specs):** os **princípios** consolidados vivem em
+> `.specify/memory/constitution.md` (derivados destas regras); os **designs de feature** vivem
+> isolados em `specs/NNN-*/`. Este `CLAUDE.md` e os por-pasta seguem como **contexto operacional
+> local** e devem obedecer a constitution. Em conflito, vale a regra mais restritiva → C4 (pare e
+> reporte). Fluxo de feature: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` →
+> `/speckit-implement` (skills em `.claude/skills/speckit-*`).
 
 ---
 
@@ -162,3 +169,8 @@ são apenas os **não-fetch** (`setMounted`, `theme-toggle`, `hero`) — qualque
 - **Vitest ligado no `web`** — 2026-06-15. O `web` passou a ter unit-test runner (Vitest, já no
   canon) para lógica pura de UI (ex.: `availability.ts` da agenda). `pnpm -C web test`.
 - _(novas exceções entram aqui, com data e justificativa, via C6)_
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
