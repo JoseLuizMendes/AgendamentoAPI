@@ -7,6 +7,13 @@
 > **Boot obrigatório:** antes de qualquer trabalho substantivo, leia (1) este arquivo e
 > (2) o `CLAUDE.md` da subpasta em que você vai mexer (`api/`, `api/src/services/`,
 > `api/src/routes/`, `web/`, `web/src/components/tenant/`). Sem isso, **não** comece.
+>
+> **Spec Kit (fonte de princípios + specs):** os **princípios** consolidados vivem em
+> `.specify/memory/constitution.md` (derivados destas regras); os **designs de feature** vivem
+> isolados em `specs/NNN-*/`. Este `CLAUDE.md` e os por-pasta seguem como **contexto operacional
+> local** e devem obedecer a constitution. Em conflito, vale a regra mais restritiva → C4 (pare e
+> reporte). Fluxo de feature: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` →
+> `/speckit-implement` (skills em `.claude/skills/speckit-*`).
 
 ---
 
@@ -156,8 +163,22 @@ são apenas os **não-fetch** (`setMounted`, `theme-toggle`, `hero`) — qualque
 ## Exceções aprovadas (registro)
 
 - **Stack backend = Fastify** (não NestJS) — decisão do dev.
-- **UI: Base UI (`@base-ui/react`) para o `combobox`** — 2026-06-14, decisão do dev. A trilha nova
-  do shadcn gera o Combobox sobre Base UI; o canon de UI fica ampliado para **Radix + Base UI**
-  (ambos sob shadcn/ui). Demais primitivos continuam em Radix (`@radix-ui/react-*` ou o
-  meta-pacote `radix-ui`).
+- ~~**UI: Base UI (`@base-ui/react`) para o `combobox`**~~ — **revertida em 2026-06-15**: o
+  `combobox` ficou sem uso após o bento de Horários; `combobox.tsx` apagado e `@base-ui/react`
+  removido. Canon de UI volta a **Radix puro** (`@radix-ui/react-*` ou o meta-pacote `radix-ui`).
+- **Vitest ligado no `web`** — 2026-06-15. O `web` passou a ter unit-test runner (Vitest, já no
+  canon) para lógica pura de UI (ex.: `availability.ts` da agenda). `pnpm -C web test`.
+- **Gráficos: Apache ECharts (`echarts`) no dashboard** — 2026-06-28, aprovado pelo dev. Recharts não
+  faz zoom por scroll/pinça nativo; o ECharts tem `dataZoom: { type: 'inside' }` (wheel + pinça de
+  fábrica). Escopo: o gráfico combinado "Movimento financeiro" (receita + agendamentos, eixo duplo).
+  **Recharts segue como padrão** nos demais gráficos; imports modulares (`echarts/core` + `use`),
+  cores via tokens lidos do CSS (`getComputedStyle`), tema re-aplicado no toggle claro/escuro.
 - _(novas exceções entram aqui, com data e justificativa, via C6)_
+
+<!-- SPECKIT START -->
+Feature ativa: **Segurança & Hardening** — `specs/003-seguranca-hardening/` ([spec](specs/003-seguranca-hardening/spec.md) + [plan](specs/003-seguranca-hardening/plan.md)). Fases 1a–2 **implementadas e verdes**:
+anti-brute-force (timing fix + lockout), hardening (bodyLimit/idempotency/`pnpm audit`) e ciclo de
+conta por email (verificação + reset via Resend). Features anteriores prontas:
+`specs/001-observabilidade-frontend` (implementada) e `specs/002-dashboard-redesign`. Princípios:
+`.specify/memory/constitution.md`; contexto/mapa: `.specify/memory/project-context.md`.
+<!-- SPECKIT END -->

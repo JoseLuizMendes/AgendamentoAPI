@@ -1,5 +1,3 @@
-import { getToken } from "./auth";
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
 export class ApiError extends Error {
@@ -13,7 +11,6 @@ export class ApiError extends Error {
 
 type ApiRequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
-  auth?: boolean;
 };
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
@@ -26,14 +23,10 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     headers.set("Content-Type", "application/json");
   }
 
-  const shouldAuth = options.auth ?? true;
-  if (shouldAuth) {
-    const token = getToken();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-  }
-
   const res = await fetch(url, {
     ...options,
+    // Envia/recebe o cookie httpOnly de auth (a sessão não vive mais no localStorage).
+    credentials: "include",
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });

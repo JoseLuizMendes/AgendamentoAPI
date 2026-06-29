@@ -5,7 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { CalendarClock, CalendarDays, Clock, LayoutDashboard, LogOut, Menu, Plus, Tag, Users } from "lucide-react";
 
-import { clearToken } from "@/lib/auth";
+import { useQueryClient } from "@tanstack/react-query";
+
+import { logout } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -24,9 +26,15 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   const { me, slug } = useTenant();
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  function logout() {
-    clearToken();
+  async function handleLogout() {
+    try {
+      await logout();
+    } catch {
+      // Ignora falha de rede no logout — o cookie expira sozinho e seguimos para o login.
+    }
+    queryClient.clear();
     router.push("/login");
   }
 
@@ -53,7 +61,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                 active
-                  ? "bg-foreground text-background font-medium"
+                  ? "relative bg-foreground/[0.07] font-medium text-foreground before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-foreground"
                   : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground",
               )}
             >
@@ -70,7 +78,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
           <p className="text-muted-foreground font-mono text-xs uppercase tracking-wide">{me.role}</p>
         </div>
         <div className="mt-2 flex items-center gap-2">
-          <Button variant="outline" size="sm" className="flex-1" onClick={logout}>
+          <Button variant="outline" size="sm" className="flex-1" onClick={handleLogout}>
             <LogOut className="size-4" /> Sair
           </Button>
           <ThemeToggle />
@@ -89,7 +97,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const title = current?.label ?? "Workspace";
 
   return (
-    <div className="bg-background flex min-h-svh">
+    <div className="workspace bg-background flex min-h-svh">
       {/* Sidebar fixa (desktop) */}
       <aside className="bg-background sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r lg:flex">
         <SidebarInner />

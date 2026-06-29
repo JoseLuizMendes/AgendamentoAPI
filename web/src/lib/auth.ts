@@ -1,16 +1,9 @@
-export const TOKEN_STORAGE_KEY = "agendamento.jwt";
+import { apiRequest } from "./api";
 
-export function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(TOKEN_STORAGE_KEY);
-}
-
-export function setToken(token: string): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
-}
-
-export function clearToken(): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+/**
+ * Sessão de auth vive num cookie httpOnly (definido pela API no login/signup) — o JS
+ * não lê o token. Logout = pedir à API para limpar o cookie.
+ */
+export async function logout(): Promise<void> {
+  await apiRequest("/auth/logout", { method: "POST" });
 }

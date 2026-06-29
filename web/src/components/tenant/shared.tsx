@@ -68,3 +68,25 @@ export function Kpi({ icon: Icon, label, value }: { icon: IconType; label: strin
     </div>
   );
 }
+
+/** Linha de estatística compacta (ícone + rótulo à esq., valor à dir.). Usada nos cards de
+ *  resumo (Horários/Serviços). */
+export function StatRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: IconType;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-sm">
+      <span className="text-muted-foreground flex min-w-0 items-center gap-2">
+        <Icon className="size-4 shrink-0" />
+        <span className="truncate">{label}</span>
+      </span>
+      <span className="font-mono font-medium">{value}</span>
+    </div>
+  );
+}

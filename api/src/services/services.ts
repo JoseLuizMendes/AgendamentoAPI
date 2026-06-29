@@ -25,6 +25,8 @@ export async function createService(
   tenantId: number,
   data: {
     name: string;
+    description?: string | null;
+    imageUrl?: string | null;
     priceInCents: number;
     durationInMinutes: number;
   }
@@ -43,6 +45,8 @@ export async function updateService(
   tenantId: number,
   data: {
     name?: string;
+    description?: string | null;
+    imageUrl?: string | null;
     priceInCents?: number;
     durationInMinutes?: number;
   }

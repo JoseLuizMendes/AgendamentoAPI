@@ -15,6 +15,26 @@ export const LoginSchema = z.object({
   tenantSlug: z.string().min(1),
 });
 
+// Ciclo de conta por email (verificação + reset de senha)
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email(),
+  tenantSlug: z.string().min(1),
+});
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
+});
+
+export const VerifyEmailSchema = z.object({
+  token: z.string().min(1),
+});
+
+export const RequestVerificationSchema = z.object({
+  email: z.string().email(),
+  tenantSlug: z.string().min(1),
+});
+
 // User schemas
 export const UserCreateSchema = z.object({
   email: z.string().email(),
@@ -33,12 +53,16 @@ export const UserParamsSchema = z.object({
 // Service schemas
 export const ServiceCreateSchema = z.object({
   name: z.string().min(1).max(200),
+  description: z.string().max(2000).nullish(),
+  imageUrl: z.string().url().max(500).nullish(),
   priceInCents: z.number().int().min(0),
   durationInMinutes: z.number().int().min(1).max(24 * 60),
 });
 
 export const ServiceUpdateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).nullish(),
+  imageUrl: z.string().url().max(500).nullish(),
   priceInCents: z.number().int().min(0).optional(),
   durationInMinutes: z.number().int().min(1).max(24 * 60).optional(),
 });
@@ -136,6 +160,7 @@ export const OverrideParamsSchema = z.object({
 export const BreakCreateSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   endTime: z.string().regex(/^\d{2}:\d{2}$/),
+  label: z.string().max(60).optional(),
 });
 
 export const BreakParamsSchema = z.object({
@@ -183,9 +208,20 @@ export const ErrorResponseSchema = z.object({
   message: z.string(),
 });
 
+export const UploadSignatureResponseSchema = z.object({
+  cloudName: z.string(),
+  apiKey: z.string(),
+  timestamp: z.number(),
+  signature: z.string(),
+  folder: z.string().optional(),
+  allowedFormats: z.string().optional(),
+});
+
 export const ServiceResponseSchema = z.object({
   id: z.number(),
   name: z.string(),
+  description: z.string().nullable(),
+  imageUrl: z.string().nullable(),
   priceInCents: z.number(),
   durationInMinutes: z.number(),
   tenantId: z.number(),

@@ -1,150 +1,53 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Search, Users } from "lucide-react";
 
 import { apiRequest, ApiError } from "@/lib/api";
-import { Eyebrow } from "@/components/brand/eyebrow";
-import { EmptyState, formatBRL } from "@/components/tenant/shared";
+import { Bento } from "@/components/ui/bento";
 import type { Appointment } from "@/components/tenant/types";
-import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/ui/native-select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-type Client = {
-  phone: string;
-  name: string;
-  visits: number;
-  lastVisit: string;
-  totalInCents: number;
-};
-
-type SortKey = "recent" | "visits" | "total" | "name";
-
-function aggregate(appts: Appointment[]): Client[] {
-  const map = new Map<string, Client & { lastTs: number }>();
-  for (const a of appts) {
-    const key = a.customerPhone || a.customerName;
-    const ts = +new Date(a.startTime);
-    const cur = map.get(key);
-    const price = a.status === "COMPLETED" ? (a.service?.priceInCents ?? 0) : 0;
-    if (!cur) {
-      map.set(key, {
-        phone: a.customerPhone,
-        name: a.customerName,
-        visits: a.status === "CANCELED" ? 0 : 1,
-        lastVisit: a.startTime,
-        lastTs: ts,
-        totalInCents: price,
-      });
-    } else {
-      if (a.status !== "CANCELED") cur.visits += 1;
-      cur.totalInCents += price;
-      if (ts > cur.lastTs) {
-        cur.lastTs = ts;
-        cur.lastVisit = a.startTime;
-        cur.name = a.customerName;
-      }
-    }
-  }
-  return [...map.values()];
-}
+import { aggregateClients } from "@/components/tenant/clientes/clients";
+import { ClientsSummaryCard } from "@/components/tenant/clientes/clients-summary-card";
+import { ClientsHighlightsCard } from "@/components/tenant/clientes/clients-highlights-card";
+import { ClientsTableCard } from "@/components/tenant/clientes/clients-table-card";
+import { ClientsTrendCard } from "@/components/tenant/clientes/clients-trend-card";
 
 export default function ClientesPage() {
   const router = useRouter();
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortKey>("recent");
 
   const { data: appts, error } = useQuery({
     queryKey: ["appointments", "all"],
     queryFn: () => apiRequest<Appointment[]>("/appointments"),
   });
 
+  // Efeito de navegação/toast (não é fetch): 401 → login; outros → toast.
   useEffect(() => {
     if (!error) return;
     if (error instanceof ApiError && error.status === 401) router.replace("/login");
     else toast.error(error instanceof ApiError ? error.message : "Erro ao carregar clientes");
   }, [error, router]);
 
-  const clients = useMemo(() => {
-    if (!appts) return [];
-    const q = query.trim().toLowerCase();
-    let list = aggregate(appts);
-    if (q) list = list.filter((c) => c.name.toLowerCase().includes(q) || c.phone.toLowerCase().includes(q));
-    list.sort((a, b) => {
-      if (sort === "visits") return b.visits - a.visits;
-      if (sort === "total") return b.totalInCents - a.totalInCents;
-      if (sort === "name") return a.name.localeCompare(b.name);
-      return +new Date(b.lastVisit) - +new Date(a.lastVisit);
-    });
-    return list;
-  }, [appts, query, sort]);
+  const clients = useMemo(() => (appts ? aggregateClients(appts) : []), [appts]);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-8">
-      <div>
-        <Eyebrow className="mb-3">Base de clientes</Eyebrow>
-        <h1 className="font-display text-3xl tracking-wide lg:text-4xl">
-          Clientes {appts ? <span className="text-muted-foreground">({clients.length})</span> : null}
-        </h1>
-      </div>
+    // min-h = viewport menos o header (h-16); o bento estica (flex-1) e, no desktop, a linha
+    // ocupa 1fr (auto-rows-fr) → as colunas alcançam a base; os cards de baixo crescem (flex-1).
+    <div className="flex min-h-[calc(100svh-4rem)] flex-col p-6 lg:p-8">
+      <Bento className="flex-1 lg:auto-rows-fr">
+        {/* Esquerda (2/6): Resumo + Destaques. */}
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          <ClientsSummaryCard clients={clients} />
+          <ClientsHighlightsCard clients={clients} className="flex-1" />
+        </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
-          <Input className="pl-9" placeholder="Buscar por nome ou telefone" value={query} onChange={(e) => setQuery(e.target.value)} />
+        {/* Direita (4/6): Tabela (natural/compacta) + Novos por mês (estica p/ fechar a coluna). */}
+        <div className="flex flex-col gap-4 lg:col-span-4">
+          <ClientsTableCard clients={clients} loading={!appts && !error} />
+          <ClientsTrendCard clients={clients} className="flex-1" />
         </div>
-        <NativeSelect className="w-44" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-          <option value="recent">Mais recentes</option>
-          <option value="visits">Mais visitas</option>
-          <option value="total">Maior gasto</option>
-          <option value="name">Nome (A-Z)</option>
-        </NativeSelect>
-      </div>
-
-      {!appts ? (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 rounded-lg" />
-          ))}
-        </div>
-      ) : clients.length === 0 ? (
-        <EmptyState icon={Users}>Nenhum cliente encontrado.</EmptyState>
-      ) : (
-        <div className="overflow-hidden rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="font-mono text-xs uppercase tracking-widest">Cliente</TableHead>
-                <TableHead className="font-mono text-xs uppercase tracking-widest">Telefone</TableHead>
-                <TableHead className="text-right font-mono text-xs uppercase tracking-widest">Visitas</TableHead>
-                <TableHead className="text-right font-mono text-xs uppercase tracking-widest">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clients.map((c) => (
-                <TableRow key={c.phone || c.name}>
-                  <TableCell>
-                    <p className="truncate font-medium">{c.name}</p>
-                    <p className="text-muted-foreground text-xs">
-                      últ. {new Date(c.lastVisit).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
-                    </p>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{c.phone || "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">{c.visits}</TableCell>
-                  <TableCell className="font-display text-right text-lg tracking-wide">
-                    {formatBRL(c.totalInCents)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      </Bento>
     </div>
   );
 }

@@ -118,10 +118,12 @@ export const hoursRoutes: FastifyPluginAsync = async (app) => {
     },
     async (req, reply) => {
       const auth = requireAuth(req);
-      const brk = await hoursService.createBreak(app.prisma, req.params.id, auth.tenantId, {
+      const data: { startTime: string; endTime: string; label?: string } = {
         startTime: req.body.startTime,
         endTime: req.body.endTime,
-      });
+      };
+      if (req.body.label !== undefined) data.label = req.body.label;
+      const brk = await hoursService.createBreak(app.prisma, req.params.id, auth.tenantId, data);
       return reply.status(201).send(brk);
     }
   );

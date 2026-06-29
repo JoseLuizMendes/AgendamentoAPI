@@ -96,7 +96,7 @@ export async function createBreak(
   prisma: PrismaClient,
   hoursId: number,
   tenantId: number,
-  data: { startTime: string; endTime: string }
+  data: { startTime: string; endTime: string; label?: string }
 ) {
   // Garante que o BusinessHours pertence ao tenant
   await getBusinessHours(prisma, hoursId, tenantId);
@@ -110,6 +110,7 @@ export async function createBreak(
       businessHoursId: hoursId,
       startTime: data.startTime,
       endTime: data.endTime,
+      label: data.label ?? null,
     },
   });
 }

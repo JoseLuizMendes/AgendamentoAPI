@@ -80,6 +80,75 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* === Paleta GRAFITE do workspace da tenant (escopada — landing/login intocadas) ===========
+   Override dos tokens só dentro do AppShell (classe .workspace). Neutros frios + acento coral
+   discreto (só foco/ring e nav ativa). Inspirado em mende-shift.vercel.app, não copiado. */
+.workspace {
+  --background: oklch(0.985 0.002 258);
+  --foreground: oklch(0.2 0.01 262);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.01 262);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.01 262);
+  --primary: oklch(0.22 0.012 262);
+  --primary-foreground: oklch(0.985 0.002 258);
+  --secondary: oklch(0.965 0.004 258);
+  --secondary-foreground: oklch(0.22 0.012 262);
+  --muted: oklch(0.965 0.004 258);
+  --muted-foreground: oklch(0.52 0.012 258);
+  --accent: oklch(0.96 0.005 258);
+  --accent-foreground: oklch(0.22 0.012 262);
+  --border: oklch(0.9 0.006 258);
+  --input: oklch(0.9 0.006 258);
+  --ring: oklch(0.62 0.012 258);
+  --chart-1: #5b86e0;
+  --chart-2: #2bb98f;
+  --chart-3: #d99a3a;
+  --chart-4: #8b7cf0;
+  --chart-5: #db6fa3;
+  --sidebar: oklch(0.99 0.002 258);
+  --sidebar-foreground: oklch(0.2 0.01 262);
+  --sidebar-primary: oklch(0.22 0.012 262);
+  --sidebar-primary-foreground: oklch(0.985 0.002 258);
+  --sidebar-accent: oklch(0.965 0.004 258);
+  --sidebar-accent-foreground: oklch(0.22 0.012 262);
+  --sidebar-border: oklch(0.9 0.006 258);
+  --sidebar-ring: oklch(0.62 0.012 258);
+}
+
+.dark .workspace {
+  --background: oklch(0.16 0.009 262);
+  --foreground: oklch(0.965 0.004 255);
+  --card: oklch(0.205 0.008 262);
+  --card-foreground: oklch(0.965 0.004 255);
+  --popover: oklch(0.205 0.008 262);
+  --popover-foreground: oklch(0.965 0.004 255);
+  --primary: oklch(0.965 0.004 255);
+  --primary-foreground: oklch(0.205 0.008 262);
+  --secondary: oklch(0.255 0.008 262);
+  --secondary-foreground: oklch(0.965 0.004 255);
+  --muted: oklch(0.255 0.008 262);
+  --muted-foreground: oklch(0.7 0.012 258);
+  --accent: oklch(0.27 0.009 262);
+  --accent-foreground: oklch(0.965 0.004 255);
+  --border: oklch(0.97 0.01 258 / 9%);
+  --input: oklch(0.97 0.01 258 / 13%);
+  --ring: oklch(0.58 0.012 258);
+  --chart-1: #5b86e0;
+  --chart-2: #2bb98f;
+  --chart-3: #d99a3a;
+  --chart-4: #8b7cf0;
+  --chart-5: #db6fa3;
+  --sidebar: oklch(0.145 0.009 262);
+  --sidebar-foreground: oklch(0.965 0.004 255);
+  --sidebar-primary: oklch(0.965 0.004 255);
+  --sidebar-primary-foreground: oklch(0.205 0.008 262);
+  --sidebar-accent: oklch(0.255 0.008 262);
+  --sidebar-accent-foreground: oklch(0.965 0.004 255);
+  --sidebar-border: oklch(0.97 0.01 258 / 9%);
+  --sidebar-ring: oklch(0.58 0.012 258);
+}
+
 @theme inline {
   /* Tipografia: Bebas Neue (display), IBM Plex Sans (corpo), IBM Plex Mono (mono) */
   --font-sans: var(--font-ibm-sans), ui-sans-serif, system-ui, sans-serif;
@@ -129,34 +198,34 @@
    legenda) e nas fases. Único ponto de verdade dessas cores. */
 @theme static {
   --color-on-event: #ffffff;
-  --color-service-1: #2563eb;
-  --color-service-1-bd: #1d4ed8;
-  --color-service-2: #059669;
-  --color-service-2-bd: #047857;
-  --color-service-3: #7c3aed;
-  --color-service-3-bd: #6d28d9;
-  --color-service-4: #d97706;
-  --color-service-4-bd: #b45309;
-  --color-service-5: #db2777;
-  --color-service-5-bd: #be185d;
-  --color-service-6: #0891b2;
-  --color-service-6-bd: #0e7490;
-  --color-service-7: #ea580c;
-  --color-service-7-bd: #c2410c;
-  --color-service-8: #0d9488;
-  --color-service-8-bd: #0f766e;
-  --color-status-scheduled: #3b82f6;
-  --color-status-scheduled-bd: #1d4ed8;
-  --color-status-confirmed: #10b981;
-  --color-status-confirmed-bd: #047857;
-  --color-status-completed: #64748b;
-  --color-status-completed-bd: #334155;
-  --color-status-no-show: #f59e0b;
-  --color-status-no-show-bd: #b45309;
-  --color-status-canceled: #ef4444;
-  --color-status-canceled-bd: #b91c1c;
-  --color-phase-awaiting: #f59e0b;
-  --color-phase-overdue: #ef4444;
+  --color-service-1: #5b86e0;
+  --color-service-1-bd: #3f63b5;
+  --color-service-2: #2bb98f;
+  --color-service-2-bd: #1f8e6e;
+  --color-service-3: #8b7cf0;
+  --color-service-3-bd: #6c5cd6;
+  --color-service-4: #d99a3a;
+  --color-service-4-bd: #ad7826;
+  --color-service-5: #db6fa3;
+  --color-service-5-bd: #b54f82;
+  --color-service-6: #3fb6c9;
+  --color-service-6-bd: #2c8a9b;
+  --color-service-7: #e08453;
+  --color-service-7-bd: #b8643a;
+  --color-service-8: #34b39a;
+  --color-service-8-bd: #258a76;
+  --color-status-scheduled: #5b86e0;
+  --color-status-scheduled-bd: #3f63b5;
+  --color-status-confirmed: #2bb98f;
+  --color-status-confirmed-bd: #1f8e6e;
+  --color-status-completed: #6b7686;
+  --color-status-completed-bd: #515b69;
+  --color-status-no-show: #d99a3a;
+  --color-status-no-show-bd: #ad7826;
+  --color-status-canceled: #d65656;
+  --color-status-canceled-bd: #ad3f3f;
+  --color-phase-awaiting: #d99a3a;
+  --color-phase-overdue: #d65656;
 }
 
 @layer base {
@@ -360,8 +429,8 @@
 .fc .fc-event.fc-appt-now {
   box-shadow: 0 0 0 1px var(--background), 0 0 0 3px var(--primary);
 }
-/* Passado indisponível: sombreamento do bloco de fundo. */
-.fc .fc-bg-event.fc-past-bg {
+/* Indisponível (passado, fechado, feriado, fora do expediente, intervalo): faixa de fundo. */
+.fc .fc-bg-event.fc-locked-bg {
   background: var(--muted-foreground);
   opacity: 0.08;
 }

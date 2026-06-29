@@ -1,6 +1,14 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { SignupSchema, LoginSchema } from "../schemas/index.js";
+import {
+  SignupSchema,
+  LoginSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
+  VerifyEmailSchema,
+  RequestVerificationSchema,
+  ErrorResponseSchema,
+} from "../schemas/index.js";
 import * as authService from "../services/auth.js";
 import { config } from "../config.js";
 import { requireAuth } from "../utils/guards.js";
@@ -14,6 +22,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     {
       schema: {
         tags: ["Auth"],
+        security: [], // pública
         body: SignupSchema,
         description: "Create a new tenant and owner user account",
       },
@@ -31,8 +40,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       // Set cookie
       reply.setCookie("token", token, {
         httpOnly: true,
-        secure: config.isProduction,
-        sameSite: "lax",
+        secure: config.cookieSecure,
+        sameSite: config.cookieSameSite,
         path: "/",
         maxAge: 60 * 60 * 24 * 7, // 7 days
       });
@@ -49,8 +58,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   zApp.post(
     "/auth/login",
     {
+      config: {
+        // Rate limit reforçado contra brute force de senha (espelha o booking público).
+        rateLimit: { max: 10, timeWindow: "1 minute" },
+      },
       schema: {
         tags: ["Auth"],
+        security: [], // pública
         body: LoginSchema,
         description: "Login to an existing tenant account",
       },
@@ -68,8 +82,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       // Set cookie
       reply.setCookie("token", token, {
         httpOnly: true,
-        secure: config.isProduction,
-        sameSite: "lax",
+        secure: config.cookieSecure,
+        sameSite: config.cookieSameSite,
         path: "/",
         maxAge: 60 * 60 * 24 * 7, // 7 days
       });
@@ -139,6 +153,80 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       }
 
       return reply.send(user);
+    }
+  );
+
+  // POST /auth/verify-email - Confirma o email a partir do token do link
+  zApp.post(
+    "/auth/verify-email",
+    {
+      config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+      schema: {
+        tags: ["Auth"],
+        security: [], // pública
+        body: VerifyEmailSchema,
+        description: "Confirma o email a partir do token enviado por email.",
+        response: { 200: ErrorResponseSchema, 400: ErrorResponseSchema },
+      },
+    },
+    async (req, reply) => {
+      await authService.verifyEmail(app.prisma, req.body.token);
+      return reply.send({ message: "Email verificado com sucesso" });
+    }
+  );
+
+  // POST /auth/verify-email/request - (Re)envia o email de verificação (silencioso)
+  zApp.post(
+    "/auth/verify-email/request",
+    {
+      config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
+      schema: {
+        tags: ["Auth"],
+        security: [], // pública
+        body: RequestVerificationSchema,
+        description: "Reenvia o email de verificação. Responde 204 sem revelar se o email existe.",
+      },
+    },
+    async (req, reply) => {
+      await authService.requestEmailVerification(app.prisma, req.body.email, req.body.tenantSlug);
+      return reply.status(204).send();
+    }
+  );
+
+  // POST /auth/forgot-password - Solicita redefinição de senha (silencioso)
+  zApp.post(
+    "/auth/forgot-password",
+    {
+      config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
+      schema: {
+        tags: ["Auth"],
+        security: [], // pública
+        body: ForgotPasswordSchema,
+        description: "Envia um link de redefinição de senha. Responde 204 sem revelar se o email existe.",
+      },
+    },
+    async (req, reply) => {
+      await authService.requestPasswordReset(app.prisma, req.body.email, req.body.tenantSlug);
+      return reply.status(204).send();
+    }
+  );
+
+  // POST /auth/reset-password - Conclui a redefinição com o token + nova senha
+  zApp.post(
+    "/auth/reset-password",
+    {
+      config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+      schema: {
+        tags: ["Auth"],
+        security: [], // pública
+        body: ResetPasswordSchema,
+        description: "Define uma nova senha a partir do token de redefinição (uso único, com expiração).",
+        response: { 200: ErrorResponseSchema, 400: ErrorResponseSchema },
+      },
+    },
+    async (req, reply) => {
+      await authService.resetPassword(app.prisma, req.body.token, req.body.password);
+      return reply.send({ message: "Senha redefinida com sucesso" });
     }
   );
 };

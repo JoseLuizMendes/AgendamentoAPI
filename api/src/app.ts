@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, type RouteOptions } from "fastify";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import helmet from "@fastify/helmet";
@@ -18,16 +18,54 @@ import { overridesRoutes } from "./routes/overrides.js";
 import { appointmentsRoutes } from "./routes/appointments.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { reportsRoutes } from "./routes/reports.js";
+import { uploadsRoutes } from "./routes/uploads.js";
 import { publicRoutes } from "./routes/public.js";
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from "fastify-type-provider-zod";
 
+/**
+ * Converte um padrão de rota do Fastify (`/public/:slug/services`, `/docs/*`) em RegExp
+ * que casa caminhos concretos — usado para detectar "caminho existe, método não bate" (405).
+ */
+function patternToRegex(urlPattern: string): RegExp {
+  const source = urlPattern
+    .split("/")
+    .map((seg) => {
+      if (seg.startsWith(":")) return "[^/]+"; // parâmetro
+      if (seg === "*") return ".*"; // wildcard
+      return seg.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // segmento estático (escapado)
+    })
+    .join("/");
+  return new RegExp(`^${source}/?$`); // tolera barra final opcional
+}
+
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: true,
+    // Limite de corpo explícito (anti-payload gigante). Folgado p/ os JSONs da API (o maior é
+    // ~25 KB no /client-errors); rotas que precisem de mais podem sobrescrever via config de rota.
+    bodyLimit: 512 * 1024, // 512 KB
+    logger: {
+      // Defense-in-depth: nunca vazar credenciais nos logs, mesmo que algum log inclua headers.
+      redact: ["req.headers.authorization", "req.headers.cookie", "res.headers['set-cookie']"],
+    },
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+
+  // Registro de rotas (padrão→método) para responder 405 em vez do 404 do Fastify quando o
+  // caminho existe mas o método não bate. `onRoute` captura toda rota registrada depois daqui,
+  // inclusive as de plugins (swagger, etc.).
+  const routeRegistry: { regex: RegExp; method: string }[] = [];
+  app.addHook("onRoute", (route: RouteOptions) => {
+    const methods = Array.isArray(route.method) ? route.method : [route.method];
+    const regex = patternToRegex(route.url);
+    for (const m of methods) {
+      // OPTIONS é o preflight do CORS (registrado como curinga `*`, casa tudo) — não conta
+      // como "endpoint real" para fins de 405, senão todo caminho inexistente viraria 405.
+      if (m.toUpperCase() === "OPTIONS") continue;
+      routeRegistry.push({ regex, method: m.toUpperCase() });
+    }
+  });
 
   app.setErrorHandler((err, req, reply) => {
     // DB não configurado (comum em deploy/ambiente sem env vars)
@@ -81,8 +119,38 @@ export async function buildApp(): Promise<FastifyInstance> {
       return reply.status(500).send({ message: "Internal Server Error" });
     }
 
+    // Erros HTTP que já carregam status próprio (ex.: rate limit 429, erros nativos do Fastify).
+    // Sem isso, o handler abaixo os mascararia como 500 — quebrando o rate limit reforçado.
+    const status = typeof anyErr?.statusCode === "number" ? anyErr.statusCode : undefined;
+    if (status && status >= 400 && status < 500) {
+      return reply.status(status).send({ message: anyErr.message ?? "Requisição inválida" });
+    }
+
     req.log.error({ err }, "Unhandled error");
     return reply.status(500).send({ message: "Internal Server Error" });
+  });
+
+  // 405 Method Not Allowed: se o caminho existe sob outro(s) método(s), devolve 405 + `Allow`.
+  // Caso contrário, mantém o 404 (mesma shape do Fastify). Rotas protegidas com método errado
+  // podem ser barradas antes pelo hook de auth (401) — esperado.
+  app.setNotFoundHandler((req, reply) => {
+    const path = (req.url.split("?")[0] || "/");
+    const allowed = new Set<string>();
+    for (const r of routeRegistry) {
+      if (r.regex.test(path)) allowed.add(r.method);
+    }
+
+    if (allowed.size > 0 && !allowed.has(req.method.toUpperCase())) {
+      const allow = [...allowed].sort().join(", ");
+      return reply
+        .status(405)
+        .header("Allow", allow)
+        .send({ message: `Method ${req.method} not allowed for ${path}`, error: "Method Not Allowed", statusCode: 405 });
+    }
+
+    return reply
+      .status(404)
+      .send({ message: `Route ${req.method}:${path} not found`, error: "Not Found", statusCode: 404 });
   });
 
   await app.register(helmet, {
@@ -127,10 +195,8 @@ export async function buildApp(): Promise<FastifyInstance> {
       const url = req.url ?? "/";
       return (
         url === "/" ||
-        url === "/docs" ||
-        url === "/documentation" ||
-        url.startsWith("/health/") ||
-        url.startsWith("/documentation/")
+        url.startsWith("/docs") || // Swagger UI + assets (/docs, /docs/json, /docs/static/...)
+        url.startsWith("/health/")
       );
     },
   });
@@ -148,6 +214,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(appointmentsRoutes);
   await app.register(settingsRoutes);
   await app.register(reportsRoutes);
+  await app.register(uploadsRoutes);
   await app.register(publicRoutes);
 
   return app;

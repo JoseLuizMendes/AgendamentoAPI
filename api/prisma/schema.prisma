@@ -49,6 +49,12 @@ model User {
   tenantId     Int
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   appointments Appointment[]
+  // Anti-brute-force: tentativas de login falhas e bloqueio temporário da conta.
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  // Verificação de email (null = ainda não verificado).
+  emailVerifiedAt     DateTime?
+  authTokens          AuthToken[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -57,9 +63,31 @@ model User {
   @@index([email])
 }
 
+enum AuthTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+// Token de verificação de email / reset de senha. Guarda só o HASH do token (o valor cru vai no
+// link do email); uso único (usedAt) e com expiração. Vazamento do banco não expõe token usável.
+model AuthToken {
+  id        Int           @id @default(autoincrement())
+  tokenHash String        @unique
+  type      AuthTokenType
+  userId    Int
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  @@index([userId])
+}
+
 model Service {
   id                Int           @id @default(autoincrement())
   name              String
+  description       String?
+  imageUrl          String?
   priceInCents      Int
   durationInMinutes Int
   tenantId          Int
@@ -124,8 +152,23 @@ model BusinessBreak {
   businessHours   BusinessHours @relation(fields: [businessHoursId], references: [id], onDelete: Cascade)
   startTime       String
   endTime         String
+  label           String?
 
   @@index([businessHoursId])
+}
+
+// Idempotency-Key do booking: evita criar agendamento duplicado em retry/duplo-clique.
+// A primeira requisição "reivindica" a (tenantId, key) via índice único; replays devolvem
+// o agendamento já criado (appointmentId).
+model IdempotencyKey {
+  id            Int      @id @default(autoincrement())
+  key           String
+  tenantId      Int
+  appointmentId Int?
+  createdAt     DateTime @default(now())
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
 }
 
 model BusinessDateOverride {

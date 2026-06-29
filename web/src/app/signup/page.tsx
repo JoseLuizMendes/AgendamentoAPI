@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { ArrowRight } from "lucide-react";
 
 import { apiRequest, ApiError } from "@/lib/api";
-import { setToken } from "@/lib/auth";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { PasswordInput } from "@/components/auth/password-input";
 import { Eyebrow } from "@/components/brand/eyebrow";
@@ -54,11 +53,9 @@ export default function SignupPage() {
     try {
       const res = await apiRequest<SignupResponse>("/auth/signup", {
         method: "POST",
-        auth: false,
         body: { email, password, name: name || undefined, tenantName, tenantSlug },
       });
 
-      setToken(res.token);
       toast.success(`Estabelecimento "${res.tenant.name}" criado!`);
       router.push(`/${res.tenant.slug}`);
     } catch (err) {

@@ -19,13 +19,19 @@ clientes,servicos,horarios}`). Landing institucional em `components/landing`.
 - **Data fetching = React Query (`@tanstack/react-query`).** **`useEffect` para buscar dados é
   proibido (C6).** `useQuery` para leitura, `useMutation` + `invalidateQueries` para escrita.
   Efeito só para sincronizar com sistema externo (DOM, timers, localStorage) — nunca para fetch.
-- **Transport:** as chamadas passam por `apiRequest`/`ApiError` (`lib/api.ts`); token via
-  `lib/auth.ts` (`agendamento.jwt`). React Query orquestra cache/estado por cima.
+- **Transport:** as chamadas passam por `apiRequest`/`ApiError` (`lib/api.ts`) com `credentials:
+  "include"`; a **sessão vive num cookie httpOnly** definido pela API (o JS não lê token). Logout =
+  `logout()` (`lib/auth.ts`) → `POST /auth/logout`. React Query orquestra cache/estado por cima.
 - **Estilo = só tokens.** Tailwind v4; cores via tokens do `app/globals.css` (`--background`,
   `--primary`, `--service-*`, `--status-*`, `--phase-*`…). **Hex hardcoded proibido.** Sem CSS
   global novo fora do `globals.css`.
 - **UI kit:** shadcn/ui (`components/ui`), sonner para toast, lucide para ícones (validar que o
   ícone existe na versão antes de usar).
+- **Error Boundaries (UX):** crash de render é coberto pelas Error Boundaries do App Router
+  (`app/error.tsx`, `app/global-error.tsx`) — fallback amigável (só tokens), sem tela branca, com
+  `reset()`. **Não** confundir com 404 (`not-found.tsx`, ainda não custom). _Observabilidade de erro
+  (rastreio/telemetria) será um serviço externo (Sentry/Datadog/Grafana), não código caseiro — o
+  reporte caseiro `POST /client-errors` foi removido._
 - **a11y:** `focus-visible` em controles, `aria-pressed`/`aria-label` em toggles/icon-buttons,
   `prefers-reduced-motion` (usar `motion-reduce:*`) em animações.
 - **Hydration:** subtree que depende de token/localStorage só renderiza pós-mount (padrão do

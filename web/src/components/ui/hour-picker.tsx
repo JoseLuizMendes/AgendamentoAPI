@@ -151,8 +151,7 @@ function WheelColumn({
       aria-label={label}
       onScroll={handleScroll}
       className={cn(
-        "relative z-10 h-[200px] w-14 overflow-x-hidden overflow-y-auto overscroll-contain",
-        "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "relative z-10 h-[200px] w-14 overflow-x-hidden overflow-y-auto overscroll-contain scrollbar-none [&::-webkit-scrollbar]:hidden"
       )}
     >
       <div aria-hidden className={SPACER} />
@@ -229,11 +228,11 @@ export function TimeWheel({
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 z-20 h-16 bg-gradient-to-b from-popover to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 z-20 h-16 bg-linear-to-b from-popover to-transparent"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-gradient-to-t from-popover to-transparent"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-linear-to-t from-popover to-transparent"
         />
         <WheelColumn options={hours} initialIndex={initialH} scrollRef={hRef} label="Horas" />
         <div className="relative z-10 flex items-center font-mono text-lg text-muted-foreground">:</div>

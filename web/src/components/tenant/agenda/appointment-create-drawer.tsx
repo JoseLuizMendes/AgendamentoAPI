@@ -11,6 +11,7 @@ import type { Service } from "@/components/tenant/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { durationLabel, localInputToISO, toLocalInputValue } from "./datetime";
@@ -66,6 +67,7 @@ function CreateContent({
   const [serviceId, setServiceId] = useState(services[0]?.id ?? 0);
   const [startStr, setStartStr] = useState(toLocalInputValue(start));
   const [endStr, setEndStr] = useState(toLocalInputValue(end));
+  const [notes, setNotes] = useState("");
 
   const createMutation = useMutation({
     mutationFn: (body: {
@@ -74,6 +76,7 @@ function CreateContent({
       serviceId: number;
       startTime: string;
       endTime: string;
+      notes?: string;
     }) => apiRequest("/appointments", { method: "POST", body }),
     onSuccess: () => {
       toast.success("Agendamento criado");
@@ -98,6 +101,7 @@ function CreateContent({
       serviceId,
       startTime: localInputToISO(startStr),
       endTime: localInputToISO(endStr),
+      notes: notes.trim() || undefined,
     });
   }
 
@@ -144,6 +148,16 @@ function CreateContent({
             <Label htmlFor="c-end">Fim</Label>
             <DateTimePicker id="c-end" value={endStr} onChange={setEndStr} />
           </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="c-notes">Observações (opcional)</Label>
+          <Textarea
+            id="c-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Preferências, detalhes do atendimento…"
+            rows={3}
+          />
         </div>
       </div>
 

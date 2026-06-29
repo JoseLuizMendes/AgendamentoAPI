@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { durationLabel, localInputToISO, toLocalInputValue } from "./datetime";
@@ -67,6 +68,7 @@ function DetailContent({
   const [serviceId, setServiceId] = useState(a.serviceId);
   const [startStr, setStartStr] = useState(toLocalInputValue(new Date(a.startTime)));
   const [endStr, setEndStr] = useState(toLocalInputValue(new Date(a.endTime)));
+  const [notes, setNotes] = useState(a.notes ?? "");
 
   const saveMutation = useMutation({
     mutationFn: (body: {
@@ -75,6 +77,7 @@ function DetailContent({
       serviceId: number;
       startTime: string;
       endTime: string;
+      notes?: string;
     }) => apiRequest(`/appointments/${a.id}`, { method: "PATCH", body }),
     onSuccess: () => {
       toast.success("Agendamento atualizado");
@@ -127,6 +130,7 @@ function DetailContent({
       serviceId,
       startTime: localInputToISO(startStr),
       endTime: localInputToISO(endStr),
+      notes: notes.trim(),
     });
   }
 
@@ -186,6 +190,16 @@ function DetailContent({
               <DateTimePicker id="e-end" value={endStr} onChange={setEndStr} />
             </div>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="e-notes">Observações</Label>
+            <Textarea
+              id="e-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Preferências, detalhes…"
+              rows={3}
+            />
+          </div>
         </div>
       ) : (
         <div className="flex-1 space-y-5 overflow-y-auto px-6">
@@ -216,6 +230,13 @@ function DetailContent({
               </div>
             ) : null}
           </div>
+
+          {a.notes ? (
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">Observações</p>
+              <p className="text-sm whitespace-pre-wrap">{a.notes}</p>
+            </div>
+          ) : null}
 
           {transitions.length > 0 ? (
             <div className="space-y-2">
