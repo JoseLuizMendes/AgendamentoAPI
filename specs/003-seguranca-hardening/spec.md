@@ -4,7 +4,8 @@
 
 **Created**: 2026-06-28
 
-**Status**: Em implementação (Fase 1 concluída; Fase 2 — email — pendente)
+**Status**: ✅ Concluída (US1, US2 e US3 implementadas e verdes; verificado em 2026-06-29). Itens
+marcados *out of scope* aqui (observabilidade, WAF/anti-DDoS na borda) seguem para os specs 004/005.
 
 **Input**: User description: "Segurança & Hardening da API: anti-brute-force (fix do timing oracle + lockout de conta), hardening geral (bodyLimit, Idempotency-Key no booking, pnpm audit no CI) e ciclo de conta por email via Resend (verificação + reset de senha)."
 
@@ -56,7 +57,7 @@ agendamento com a mesma chave de idempotência → no máximo um agendamento cri
 
 ---
 
-### User Story 3 - Ciclo de conta por email (verificação + reset) (Priority: P3) ⏳ pendente
+### User Story 3 - Ciclo de conta por email (verificação + reset) (Priority: P3) ✅ implementada
 
 O dono/staff precisa confirmar a posse do email no cadastro e recuperar o acesso caso esqueça a
 senha, sem depender de suporte manual.

@@ -1,7 +1,7 @@
-# Specification Quality Checklist: Segurança & Hardening
+# Specification Quality Checklist: Prod-Readiness & Hardening Final
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-06-28
+**Created**: 2026-06-29
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -31,8 +31,11 @@
 
 ## Notes
 
-- Provedor de email (Resend) é registrado como **Assumption/Dependency**, não como detalhe de
-  implementação no corpo dos requisitos.
-- Decisão de produto "login de não-verificado" resolvida com default documentado (permite + aviso),
-  evitando marcador de clarificação.
-- US1, US2 e US3 implementadas e verdes (Fases 1 e 2 concluídas; verificado em 2026-06-29).
+- Spec é de prontidão para produção (segurança/infra), derivada da auditoria de 2026-06-29. Mantém o
+  estilo "WHAT/WHY": nomes concretos de bibliotecas/versões foram deixados para o `plan.md`; os
+  requisitos descrevem capacidades e resultados verificáveis (ex.: "lib de verificação de JWT sem
+  advisory crítico" em vez de "fast-jwt ≥ 6.2.4").
+- Decisões do dev incorporadas como Assumptions: hospedagem inteira na VPS; sem Redis nesta fase
+  (redução de risco de sessão via janela curta, não denylist); observabilidade no 005.
+- US1/US2 são P1 (bloqueadores de go-live); US3 P2 (endurecimento); US4/US5 P3 (higiene e polimento),
+  ordenadas para serem implementadas por último.

@@ -176,9 +176,8 @@ são apenas os **não-fetch** (`setMounted`, `theme-toggle`, `hero`) — qualque
 - _(novas exceções entram aqui, com data e justificativa, via C6)_
 
 <!-- SPECKIT START -->
-Feature ativa: **Segurança & Hardening** — `specs/003-seguranca-hardening/` ([spec](specs/003-seguranca-hardening/spec.md) + [plan](specs/003-seguranca-hardening/plan.md)). Fases 1a–2 **implementadas e verdes**:
-anti-brute-force (timing fix + lockout), hardening (bodyLimit/idempotency/`pnpm audit`) e ciclo de
-conta por email (verificação + reset via Resend). Features anteriores prontas:
-`specs/001-observabilidade-frontend` (implementada) e `specs/002-dashboard-redesign`. Princípios:
+Feature ativa: **Prod-Readiness & Hardening Final** — `specs/004-prod-readiness/` ([spec](specs/004-prod-readiness/spec.md) + [plan](specs/004-prod-readiness/plan.md)). **Em planejamento** (spec+plan prontos; `tasks.md` pendente via `/speckit-tasks`). Escopo: zerar CVEs de deps (fast-jwt/fastify/next), app inteiro na VPS (web dockerizado + Caddy 2 domínios + web no CI), endurecer sessão/headers (token fora do body, JWT 2d, Swagger fora de prod, gate de rota), higiene de repo/infra (lockfile único, remover Redis, audit bloqueante). Observabilidade vai no **005**.
+Features prontas: `specs/001-observabilidade-frontend`, `specs/002-dashboard-redesign`, e
+`specs/003-seguranca-hardening` (**✅ concluída**: anti-brute-force, hardening, email verify/reset). Princípios:
 `.specify/memory/constitution.md`; contexto/mapa: `.specify/memory/project-context.md`.
 <!-- SPECKIT END -->
