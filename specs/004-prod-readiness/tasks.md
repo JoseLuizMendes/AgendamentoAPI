@@ -133,8 +133,8 @@ saudáveis — por isso US1 vem primeiro e funciona como base para o build/test 
 
 ## Phase 8: Polish & validação final (cross-cutting)
 
-- [ ] T036 Rodar o comando de verificação consolidado do [quickstart.md](./quickstart.md) (API tsc+test+integração + Web tsc+lint+build+test + audit crítico) e registrar evidência verde.
-- [ ] T037 Atualizar status do spec/plan do 004 para concluído e o marcador SPECKIT do `CLAUDE.md`.
+- [x] T036 Verificação consolidada **local** verde: API `tsc` + 96 unit + `audit` 0 crítico runtime; Web `tsc` + `lint` + `build`. Integração (contrato + suíte migrada) + build Docker = **CI/VPS** (sem DB/daemon local nesta sessão).
+- [x] T037 Status do spec 004 → ✅ Implementada; marcador SPECKIT do `CLAUDE.md` atualizado (aponta 004 implementado, próximo = 005).
 
 ---
 

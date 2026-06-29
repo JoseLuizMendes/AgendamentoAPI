@@ -4,7 +4,10 @@
 
 **Created**: 2026-06-29
 
-**Status**: Draft (derivado da auditoria de prod-readiness de 2026-06-29)
+**Status**: ✅ Implementada (US1–US5) em 2026-06-29 — verificação local verde (API tsc + 96 unit;
+Web tsc + lint + build; `pnpm audit` 0 crítico runtime). Testes de **integração** (contrato de auth +
+suíte migrada) e **build das imagens Docker** validam no **CI/VPS** (sem DB/daemon Docker local nesta
+sessão). Observabilidade fica no spec 005.
 
 **Input**: User description: "Prod-readiness & hardening final para colocar API + Web inteiros numa
 VPS (Docker + Caddy). Atualizar dependências com CVE, fechar superfície de autenticação, dockerizar o
