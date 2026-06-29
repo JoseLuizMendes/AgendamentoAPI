@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { reportClientError } from "@/lib/report-error";
 
 /**
  * Error Boundary das rotas (App Router). Renderiza dentro do root layout, então só
@@ -10,16 +8,11 @@ import { reportClientError } from "@/lib/report-error";
  * um componente quebra no render e oferece `reset()` para tentar de novo.
  */
 export default function Error({
-  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    reportClientError({ message: error.message, stack: error.stack, kind: "render" });
-  }, [error]);
-
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
       <div className="space-y-2">

@@ -94,7 +94,6 @@ const authPlugin: FastifyPluginAsync = async (app) => {
     "/auth/reset-password",
     "/auth/verify-email",
     "/public",
-    "/client-errors",
   ];
 
   app.addHook("onRequest", async (req, reply) => {

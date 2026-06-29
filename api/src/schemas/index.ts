@@ -203,17 +203,6 @@ export const PublicAppointmentCreateSchema = z.object({
   startTime: z.string().datetime(),
 });
 
-// Client error report (POST /client-errors — observabilidade caseira, sem persistência)
-export const ClientErrorSchema = z.object({
-  message: z.string().min(1).max(2000),
-  stack: z.string().max(10000).optional(),
-  componentStack: z.string().max(10000).optional(),
-  url: z.string().max(2000).optional(),
-  userAgent: z.string().max(500).optional(),
-  appVersion: z.string().max(100).optional(),
-  kind: z.enum(["render", "unhandled", "rejection"]).optional(),
-});
-
 // Response schemas
 export const ErrorResponseSchema = z.object({
   message: z.string(),
@@ -338,4 +327,3 @@ export type BusinessHoursCreate = z.infer<typeof BusinessHoursCreateSchema>;
 export type BusinessHoursUpdate = z.infer<typeof BusinessHoursUpdateSchema>;
 export type OverrideCreate = z.infer<typeof OverrideCreateSchema>;
 export type OverrideUpdate = z.infer<typeof OverrideUpdateSchema>;
-export type ClientError = z.infer<typeof ClientErrorSchema>;

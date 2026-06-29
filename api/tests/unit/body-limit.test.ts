@@ -24,7 +24,7 @@ describe("bodyLimit", () => {
     const huge = "x".repeat(600 * 1024); // ~600 KB, acima do limite (512 KB)
     const res = await app.inject({
       method: "POST",
-      url: "/client-errors",
+      url: "/auth/signup", // rota POST existente; o 413 dispara no parsing, antes da validação
       headers: { "content-type": "application/json" },
       payload: JSON.stringify({ message: huge }),
     });

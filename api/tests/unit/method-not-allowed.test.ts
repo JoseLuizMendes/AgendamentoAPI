@@ -22,8 +22,8 @@ describe("405 Method Not Allowed", () => {
     vi.unstubAllEnvs();
   });
 
-  it("GET numa rota POST-only (/client-errors) → 405 + Allow: POST", async () => {
-    const res = await app.inject({ method: "GET", url: "/client-errors" });
+  it("GET numa rota POST-only (/auth/signup) → 405 + Allow: POST", async () => {
+    const res = await app.inject({ method: "GET", url: "/auth/signup" });
     expect(res.statusCode).toBe(405);
     expect(res.headers["allow"]).toContain("POST");
     const body = res.json();

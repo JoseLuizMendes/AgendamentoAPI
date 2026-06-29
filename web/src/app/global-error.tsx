@@ -1,8 +1,6 @@
 "use client";
 
 import "./globals.css";
-import { useEffect } from "react";
-import { reportClientError } from "@/lib/report-error";
 
 /**
  * Error Boundary do root layout. Substitui o `<html>/<body>` quando o próprio layout
@@ -10,16 +8,11 @@ import { reportClientError } from "@/lib/report-error";
  * provider/tema (eles podem ter sido o que falhou): só tokens e recarregar a página.
  */
 export default function GlobalError({
-  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    reportClientError({ message: error.message, stack: error.stack, kind: "render" });
-  }, [error]);
-
   return (
     <html lang="pt-BR">
       <body className="font-sans antialiased">

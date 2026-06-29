@@ -20,7 +20,6 @@ import { settingsRoutes } from "./routes/settings.js";
 import { reportsRoutes } from "./routes/reports.js";
 import { uploadsRoutes } from "./routes/uploads.js";
 import { publicRoutes } from "./routes/public.js";
-import { clientErrorsRoutes } from "./routes/client-errors.js";
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from "fastify-type-provider-zod";
 
 /**
@@ -217,7 +216,6 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(reportsRoutes);
   await app.register(uploadsRoutes);
   await app.register(publicRoutes);
-  await app.register(clientErrorsRoutes);
 
   return app;
 }
