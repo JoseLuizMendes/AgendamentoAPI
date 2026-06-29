@@ -1,7 +1,13 @@
-# HTTPS automático (Let's Encrypt) para o domínio definido em $DOMAIN.
-# Requer DNS apontando o domínio para o IP da VPS e portas 80/443 abertas.
+# HTTPS automático (Let's Encrypt) para os domínios da API e do Web.
+# Requer DNS apontando cada domínio para o IP da VPS e portas 80/443 abertas.
+# $API_DOMAIN / $WEB_DOMAIN vêm do .env (ver .env.example).
 
-{$DOMAIN} {
+{$API_DOMAIN} {
 	encode gzip
 	reverse_proxy api:3000
+}
+
+{$WEB_DOMAIN} {
+	encode gzip
+	reverse_proxy web:3000
 }

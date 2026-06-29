@@ -65,15 +65,15 @@ saudáveis — por isso US1 vem primeiro e funciona como base para o build/test 
 
 **Independent Test**: `docker compose up` → `curl -I https://app.<dominio>` e `https://api.<dominio>/health/live` 200; login ponta a ponta.
 
-- [ ] T008 [US2] Adicionar `output: 'standalone'` em `web/next.config.ts`.
-- [ ] T009 [P] [US2] Criar `web/Dockerfile` multi-stage (build → runtime com `.next/standalone` + `.next/static` + `public`), usuário não-root, `EXPOSE 3000`, `CMD ["node","server.js"]`.
-- [ ] T010 [P] [US2] Criar `web/.dockerignore` (`node_modules`, `.next`, `.git`, etc.).
-- [ ] T011 [US2] Adicionar serviço `web` em `api/docker-compose.yml` (build/imagem, `expose: 3000`, `restart: unless-stopped`, sem porta no host) — atenção ao contexto de build (web está fora de `api/`).
-- [ ] T012 [US2] Atualizar `api/Caddyfile`: bloco `{$WEB_DOMAIN} -> reverse_proxy web:3000` além do `{$API_DOMAIN} -> reverse_proxy api:3000`; trocar `DOMAIN` por `WEB_DOMAIN`/`API_DOMAIN`.
-- [ ] T013 [US2] Ajustar env de produção: `CORS_ORIGIN` inclui `https://app.<dominio>`; `NEXT_PUBLIC_API_URL=https://api.<dominio>`; refletir as novas chaves em `api/.env.example` e `web/.env.example`.
-- [ ] T014 [US2] `.github/workflows/ci.yml`: adicionar job `web` (setup pnpm/node, install, `tsc --noEmit`, `lint`, `build`, `vitest run`).
-- [ ] T015 [US2] `.github/workflows/deploy.yml`: build + publish da imagem do Web no GHCR (espelhando a da API).
-- [ ] T016 [US2] Validar (quickstart US2): `docker compose build && up -d`; `docker compose ps`; `curl -I` nos dois domínios; login ponta a ponta (cookie aceito entre `app.` e `api.`).
+- [x] T008 [US2] `output: 'standalone'` + `outputFileTracingRoot` (standalone plano) + `poweredByHeader:false` em `web/next.config.ts`. ✅ build gera `.next/standalone/server.js`.
+- [x] T009 [P] [US2] `web/Dockerfile` multi-stage (build → runtime standalone, non-root, `ARG NEXT_PUBLIC_API_URL` build-time, `EXPOSE 3000`, `CMD ["node","server.js"]`). Escrito conforme padrão oficial Next standalone (server.js confirmado pelo `next build`). _Build da imagem validado no CI/VPS — daemon Docker local indisponível nesta sessão._
+- [x] T010 [P] [US2] `web/.dockerignore` criado (`node_modules`, `.next`, `.git`, `.env*`, etc.).
+- [x] T011 [US2] Serviço `web` em `api/docker-compose.yml` (imagem GHCR `WEB_IMAGE`, healthcheck, `expose: 3000`, sem porta no host). ✅ `docker compose config` válido.
+- [x] T012 [US2] `api/Caddyfile`: blocos `{$API_DOMAIN} -> api:3000` e `{$WEB_DOMAIN} -> web:3000`; compose passa `API_DOMAIN`/`WEB_DOMAIN`.
+- [x] T013 [US2] `CORS_ORIGIN`/`NEXT_PUBLIC_API_URL` documentados; criado `api/.env.example` e atualizado `web/.env.example` com as chaves de deploy (API_IMAGE/WEB_IMAGE/API_DOMAIN/WEB_DOMAIN).
+- [x] T014 [US2] `.github/workflows/ci.yml`: job `web` (install, audit, `tsc`, `lint`, `test`, `build`).
+- [x] T015 [US2] `.github/workflows/deploy.yml`: build+push de **duas** imagens (`-api` e `-web`), Web com `--build-arg NEXT_PUBLIC_API_URL`.
+- [~] T016 [US2] Validação: `next build` standalone ✅ + `docker compose config` ✅. `docker build`/`compose up` + `curl` nos domínios = validação de **CI/deploy na VPS** (daemon Docker local indisponível; DNS/HTTPS reais só na VPS).
 
 **Checkpoint**: produto acessível por HTTPS na VPS; CI/CD cobre Web e API.
 
