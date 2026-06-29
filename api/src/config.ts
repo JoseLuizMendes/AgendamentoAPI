@@ -44,6 +44,11 @@ const EnvSchema = z
     RESEND_FROM: z.string().min(1).optional(),
     // Base do app web — monta os links de verificação/reset enviados por email.
     APP_BASE_URL: z.string().url().default("http://localhost:3001"),
+    // Observabilidade (Sentry). Sem DSN → desligado (no-op; dev/local não envia nada).
+    SENTRY_DSN: z.string().min(1).optional(),
+    SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+    SENTRY_RELEASE: z.string().min(1).optional(),
+    SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production") {
@@ -83,6 +88,12 @@ export type Config = {
     uploadFolder?: string;
     allowedFormats: string;
   } | null;
+  sentry: {
+    dsn: string;
+    environment: string;
+    release: string | undefined;
+    tracesSampleRate: number;
+  } | null;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -111,6 +122,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         }
       : null;
 
+  // Sem DSN ⇒ observabilidade desligada. tracesSampleRate default: dev 1.0 / prod 0.1.
+  const sentry = e.SENTRY_DSN
+    ? {
+        dsn: e.SENTRY_DSN,
+        environment: e.SENTRY_ENVIRONMENT ?? e.NODE_ENV,
+        release: e.SENTRY_RELEASE,
+        tracesSampleRate: e.SENTRY_TRACES_SAMPLE_RATE ?? (e.NODE_ENV === "production" ? 0.1 : 1.0),
+      }
+    : null;
+
   return {
     nodeEnv: e.NODE_ENV,
     isProduction: e.NODE_ENV === "production",
@@ -132,6 +153,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     appBaseUrl: e.APP_BASE_URL,
     resend,
     cloudinary,
+    sentry,
   };
 }
 

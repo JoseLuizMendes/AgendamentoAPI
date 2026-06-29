@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import cors from "@fastify/cors";
+import * as Sentry from "@sentry/node";
 import { config } from "./config.js";
 import prismaPlugin from "./plugins/prisma.js";
 import swaggerPlugin from "./plugins/docs/swagger.js";
@@ -232,6 +233,12 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(reportsRoutes);
   await app.register(uploadsRoutes);
   await app.register(publicRoutes);
+
+  // Captura de erros no Sentry (onError) — só quando habilitado por DSN. Coexiste com o
+  // setErrorHandler acima (este formata a resposta; o Sentry apenas registra o evento).
+  if (config.sentry) {
+    Sentry.setupFastifyErrorHandler(app);
+  }
 
   return app;
 }

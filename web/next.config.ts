@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // Headers de segurança aplicados a todas as respostas (confirmados via doc atual do Next 16).
 const securityHeaders = [
@@ -29,4 +30,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Envolve o config com o Sentry (injeta a instrumentação; upload de sourcemaps só com
+// SENTRY_AUTH_TOKEN no CI — sem o token, o build segue sem upload).
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+});

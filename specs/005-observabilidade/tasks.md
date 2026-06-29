@@ -22,10 +22,10 @@ validada manualmente ([quickstart.md](./quickstart.md)).
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirmar/registrar a **exceção de stack (C6)** para `@sentry/node` + `@sentry/nextjs` em `.specify/memory/constitution.md` (§Exceções) e `CLAUDE.md` raiz (data + justificativa: observabilidade SaaS, SDK OTel-based portável).
-- [ ] T002 Criar 2 projetos no Sentry (um p/ API, um p/ Web) e anotar os DSNs (ação do dev — fora do código).
-- [ ] T003 [P] Instalar `@sentry/node` em `api/` (`pnpm -C api add @sentry/node`) — versão exata via C7/npm; rodar `pnpm -C api audit`.
-- [ ] T004 [P] Instalar `@sentry/nextjs` em `web/` (`pnpm -C web add @sentry/nextjs`) — versão casada com Next 16.2.x; rodar `pnpm -C web audit`.
+- [x] T001 Exceção de stack (C6) registrada na constituição (§Exceções) e no `CLAUDE.md` raiz. ✅
+- [x] T002 Projeto Sentry criado pelo dev; DSN em mãos (1 projeto usado p/ API e Web — separável depois). ✅
+- [x] T003 [P] `@sentry/node` **10.62.0** instalado em `api/`; audit 0 crítico. ✅
+- [x] T004 [P] `@sentry/nextjs` **10.62.0** instalado em `web/`; audit 0. ✅
 
 **Checkpoint**: SDKs instalados, exceção registrada, DSNs em mãos.
 
@@ -35,10 +35,10 @@ validada manualmente ([quickstart.md](./quickstart.md)).
 
 **Purpose**: config validada + scrub puro — pré-requisitos compartilhados por US1/US2/US3.
 
-- [ ] T005 [US-shared] `api/src/config.ts`: bloco `sentry` por env (`SENTRY_DSN` opcional, `SENTRY_ENVIRONMENT` default `NODE_ENV`, `SENTRY_RELEASE` opcional, `SENTRY_TRACES_SAMPLE_RATE` número 0..1 com default dev 1.0/prod 0.1). `config.sentry = null` sem DSN.
-- [ ] T006 (TDD-RED) `api/tests/unit/scrub.test.ts`: evento com `Authorization`/`Cookie`/`set-cookie`/`request.cookies` e corpo de `/auth/*` com `password` → saneado (`[Filtered]`/removido); evento sem `request` passa inalterado.
-- [ ] T007 `api/src/observability/scrub.ts`: `scrubEvent` puro (implementa o contrato de `contracts/observability-config.md`) — GREEN do T006.
-- [ ] T008 (TDD) `api/tests/unit/config.test.ts`: casos `sentry` — sem DSN ⇒ `config.sentry === null`; com DSN ⇒ objeto com sample rate default por ambiente.
+- [x] T005 [US-shared] `api/src/config.ts`: bloco `sentry` por env (DSN/environment/release/tracesSampleRate; default dev 1.0/prod 0.1); `config.sentry = null` sem DSN. ✅
+- [x] T006 (TDD-RED→GREEN) `api/tests/unit/scrub.test.ts` (3 testes). ✅ (RED confirmado antes da impl)
+- [x] T007 `api/src/observability/scrub.ts`: `scrubEvent` puro (headers Authorization/Cookie/Set-Cookie, request.cookies, senha/token no corpo). ✅
+- [x] T008 (TDD) `config.test.ts`: sem DSN ⇒ null; com DSN ⇒ sample rate default por ambiente; override. ✅
 
 **Checkpoint**: config + scrub prontos e testados (sem tocar no SDK ainda).
 
@@ -50,15 +50,15 @@ validada manualmente ([quickstart.md](./quickstart.md)).
 
 **Independent Test**: provocar erro em prod/staging → evento no painel com stack + rota + release; sem DSN, nada é enviado.
 
-- [ ] T009 [US1] `api/src/instrument.ts`: `Sentry.init({ dsn, environment, release, tracesSampleRate, sendDefaultPii:false, beforeSend: scrubEvent })` **somente se** `config.sentry`; no-op caso contrário.
-- [ ] T010 [US1] `api/src/server.ts`: `import "./instrument.js"` como **primeira** linha (antes de qualquer outro import do app).
-- [ ] T011 [US1] `api/src/app.ts`: `Sentry.setupFastifyErrorHandler(app)` quando `config.sentry` (depois do error handler atual, sem suprimir as respostas existentes).
-- [ ] T012 [P] [US1] `web/instrumentation.ts`: `register()` (server/edge) + `onRequestError` do `@sentry/nextjs`, gate por `NEXT_PUBLIC_SENTRY_DSN`.
-- [ ] T013 [P] [US1] `web/instrumentation-client.ts`: `Sentry.init` client (gate por DSN, `beforeSend` de scrub, `tracesSampleRate`).
-- [ ] T014 [US1] `web/next.config.ts`: envolver com `withSentryConfig` (release/sourcemaps; sourcemaps atrás de `SENTRY_AUTH_TOKEN`, não bloqueante).
-- [ ] T015 [US1] Integrar `captureException` nas Error Boundaries existentes (`web/src/app/error.tsx`, `global-error.tsx`).
-- [ ] T016 [US1] Release/env: `api/.env.example` + `web/.env.example` com chaves `SENTRY_*`/`NEXT_PUBLIC_SENTRY_DSN`; `deploy.yml` passa `SENTRY_RELEASE`=SHA (API) e usa `NEXT_PUBLIC_APP_VERSION`=SHA (Web).
-- [ ] T017 [US1] Verificar: API `tsc` + `test`; Web `tsc` + `lint` + `build`. Validação manual (quickstart US1).
+- [x] T009 [US1] `api/src/instrument.ts`: `Sentry.init` gateado por `config.sentry` (sendDefaultPii:false + beforeSend scrub). ✅
+- [x] T010 [US1] `api/src/server.ts`: `import "./instrument.js"` 1ª linha; produção via `node --import ./dist/instrument.js` (entrypoint + `start`). ✅
+- [x] T011 [US1] `api/src/app.ts`: `Sentry.setupFastifyErrorHandler(app)` quando `config.sentry` (coexiste com o error handler). ✅
+- [x] T012 [P] [US1] `web/instrumentation.ts`: `register()` + `onRequestError`, gate por DSN. ✅
+- [x] T013 [P] [US1] `web/instrumentation-client.ts`: init client + `onRouterTransitionStart`, gate por DSN + scrub. ✅
+- [x] T014 [US1] `web/next.config.ts`: `withSentryConfig` (sourcemaps atrás de `SENTRY_AUTH_TOKEN`, `silent`). ✅ build verde.
+- [x] T015 [US1] `captureException` nas Error Boundaries (`error.tsx`, `global-error.tsx`) via `useEffect`. ✅
+- [x] T016 [US1] `.env.example` (API+Web) com `SENTRY_*`/`NEXT_PUBLIC_SENTRY_DSN`; `web/Dockerfile` + `deploy.yml` passam DSN/`NEXT_PUBLIC_APP_VERSION`=`github.sha` + sourcemap args. DSN real nos `.env` locais (gitignored). ✅
+- [x] T017 [US1] Verificado: API `tsc` + **102 unit** ✅; Web `tsc` + `lint` + `build` ✅. Captura real = manual (quickstart, precisa de tráfego).
 
 **Checkpoint**: erros de produção capturados e correlacionados ao deploy.
 
@@ -70,8 +70,8 @@ validada manualmente ([quickstart.md](./quickstart.md)).
 
 **Independent Test**: erro em rota de auth autenticada → evento sem dados sensíveis; sem DSN → zero envio.
 
-- [ ] T018 [US3] Confirmar `beforeSend: scrubEvent` ligado nos dois inits (API `instrument.ts` e Web client/server) e `sendDefaultPii:false` em ambos.
-- [ ] T019 [US3] (validação) Quickstart US3: provocar erro autenticado e inspecionar o evento (sem `Cookie`/`Authorization`/`password`); rodar sem DSN e confirmar **zero** envio.
+- [x] T018 [US3] `beforeSend: scrubEvent` + `sendDefaultPii:false` ligados nos inits da API (`instrument.ts`) e do Web (`instrumentation.ts` + `instrumentation-client.ts`). ✅
+- [~] T019 [US3] Validação local: gate por DSN testado (sem DSN ⇒ no-op); scrub testado (unit). Inspeção do evento real saneado = **manual** (quickstart, precisa de DSN + erro autenticado).
 
 **Checkpoint**: telemetria saneada e segura por padrão.
 
@@ -83,8 +83,8 @@ validada manualmente ([quickstart.md](./quickstart.md)).
 
 **Independent Test**: gerar tráfego → transações com spans de rota + consulta ao banco; ajustar sample rate por env muda o volume.
 
-- [ ] T020 [US2] Confirmar `tracesSampleRate` (env, default dev 1.0/prod 0.1) ativo na API e no Web; validar spans de rota + consulta (auto-instrumentação OTel do `@sentry/node`).
-- [ ] T021 [P] [US2] (Opcional) Upload de sourcemaps do Web no CI via `withSentryConfig` + `SENTRY_AUTH_TOKEN` (secret) — não bloqueante (sem token, build segue).
+- [x] T020 [US2] `tracesSampleRate` por env (default dev 1.0/prod 0.1) ativo na API (`instrument.ts`) e Web. Spans de rota/consulta = auto-instrumentação OTel do `@sentry/node` (validação no painel). ✅
+- [x] T021 [P] [US2] Sourcemaps fiados via `withSentryConfig` + `SENTRY_AUTH_TOKEN` (build-arg/secret), não bloqueante (sem token, build segue — confirmado). ✅
 
 **Checkpoint**: performance observável por dados reais.
 
@@ -96,7 +96,7 @@ validada manualmente ([quickstart.md](./quickstart.md)).
 
 **Independent Test**: derrubar um domínio → monitor externo notifica em poucos minutos.
 
-- [ ] T022 [US4] `api/DEPLOY.md`: seção "Uptime externo" — monitor gratuito (UptimeRobot/Better Stack) em `https://api.<dominio>/health/live` e `https://app.<dominio>/`, com notificação; distinção host-vs-app via health checks.
+- [x] T022 [US4] `api/DEPLOY.md` §7: seção "Observabilidade & Uptime externo" (monitor gratuito nos dois domínios + health checks + config Sentry de deploy). ✅
 
 **Checkpoint**: rede de segurança final documentada.
 
@@ -104,8 +104,8 @@ validada manualmente ([quickstart.md](./quickstart.md)).
 
 ## Phase 7: Polish & validação final
 
-- [ ] T023 Rodar verificação consolidada (API `tsc`+`test`; Web `tsc`+`lint`+`build`; `audit`) e registrar evidência verde.
-- [ ] T024 Atualizar status do spec/plan 005 e o marcador SPECKIT do `CLAUDE.md` para concluído.
+- [x] T023 Verificação consolidada verde: API `tsc` + **102 unit** + `audit` 0 crítico; Web `tsc` + `lint` + `build` + `audit` 0. ✅
+- [x] T024 Status do spec/plan 005 → Implementada; marcador SPECKIT do `CLAUDE.md` atualizado.
 
 ---
 

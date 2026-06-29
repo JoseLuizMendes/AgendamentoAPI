@@ -167,3 +167,25 @@ nunca deixar o banco num estado ruim sem volta:
 - Mudanças destrutivas (drop de coluna) em **duas fases**: deploy 1 para de usar a coluna; deploy 2
   a remove — assim o rollback do deploy 2 não perde dados.
 - Imagens são tagueadas por `:sha` (ver `deploy.yml`) — sempre há uma tag estável para voltar.
+
+---
+
+## 7. Observabilidade (Sentry) & Uptime externo
+
+### Sentry (erros + tracing) — spec 005
+- **Desligado por padrão**: sem DSN, a captura é no-op (dev/local não envia nada).
+- **API** (`.env` da VPS): `SENTRY_DSN`, `SENTRY_ENVIRONMENT=production`, `SENTRY_RELEASE=<sha>`
+  (use o SHA da imagem em deploy), `SENTRY_TRACES_SAMPLE_RATE=0.1`.
+- **Web** (build-time, no CI): repo **Variables** `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`,
+  `SENTRY_PROJECT`; repo **Secret** `SENTRY_AUTH_TOKEN` (opcional — habilita upload de sourcemaps p/
+  stack trace legível; sem ele, o build segue). `NEXT_PUBLIC_APP_VERSION` já recebe o `github.sha`.
+- Os eventos passam por **scrub** (`beforeSend`) + `sendDefaultPii:false` — cookie/Authorization/senha
+  nunca saem. Falha de envio é best-effort (não derruba a app).
+
+### Uptime externo (rede de segurança quando a VPS inteira cai)
+A captura interna do Sentry não reporta "o host inteiro caiu". Configure um monitor **externo**
+gratuito (ex.: **UptimeRobot**, **Better Stack**) com checagem HTTP a cada 1–5 min:
+- `https://api.<dominio>/health/live` → espera `200 {"status":"ok"}`.
+- `https://app.<dominio>/` → espera `200`.
+- Notificação por email/Telegram/Slack quando cair. Os health checks distinguem "host no ar mas app
+  degradada" (5xx/timeout no `/health/live`) de "tudo fora" (sem resposta).

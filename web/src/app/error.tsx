@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -8,11 +10,17 @@ import { Button } from "@/components/ui/button";
  * um componente quebra no render e oferece `reset()` para tentar de novo.
  */
 export default function Error({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Reporta o erro de render à observabilidade (no-op sem DSN). Efeito = sync com sistema externo.
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
       <div className="space-y-2">

@@ -4,7 +4,10 @@
 
 **Created**: 2026-06-29
 
-**Status**: Draft
+**Status**: ✅ Implementada (US1–US4) em 2026-06-29 — verificação local verde (API tsc + 102 unit, incl.
+scrub + gate por DSN; Web tsc + lint + build; audit 0 crítico). Captura real do Sentry, scrub em voo e
+tracing = validação **manual** no painel (precisam de DSN + tráfego). SDKs `@sentry/node`/`@sentry/nextjs`
+10.62.0.
 
 **Input**: User description: "Observabilidade de produção para API (Fastify) + Web (Next 16) na VPS:
 visibilidade de erros e de performance com o menor peso operacional possível. Decisão: usar Sentry

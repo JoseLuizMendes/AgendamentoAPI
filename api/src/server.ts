@@ -1,3 +1,4 @@
+import "./instrument.js"; // Sentry.init ANTES de tudo (carrega dotenv + config; no-op sem DSN)
 import "dotenv/config";
 import { buildApp } from "./app.js";
 import { config } from "./config.js";

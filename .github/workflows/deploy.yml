@@ -64,9 +64,14 @@ jobs:
           push: true
           tags: ${{ steps.meta_web.outputs.tags }}
           labels: ${{ steps.meta_web.outputs.labels }}
-          # NEXT_PUBLIC_* é inlined no build — domínio público da API via repo variable.
+          # NEXT_PUBLIC_* é inlined no build — domínio público da API + Sentry via repo vars/secrets.
           build-args: |
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+            NEXT_PUBLIC_APP_VERSION=${{ github.sha }}
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 

@@ -64,7 +64,8 @@ em `specs/` (isolados do código); `CLAUDE.md` por pasta é contexto local que a
 Exceções aprovadas vivem aqui e no `CLAUDE.md` raiz (ex.: backend Fastify puro em vez de NestJS;
 Vitest ligado no `web` para lógica pura de UI; **Apache ECharts** no gráfico "Movimento financeiro"
 do dashboard — zoom wheel/pinça nativo via `dataZoom: inside`, 2026-06-28; Recharts segue padrão no
-restante).
+restante; **Sentry** — `@sentry/node` (OTel-based, portável) + `@sentry/nextjs` — para observabilidade
+de produção (erros + tracing SaaS), 2026-06-29, spec 005).
 
 ## Quality Gates & Workflow
 
