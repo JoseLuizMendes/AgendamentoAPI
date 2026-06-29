@@ -121,11 +121,11 @@ saudáveis — por isso US1 vem primeiro e funciona como base para o build/test 
 
 **Independent Test**: revisar cada item e confirmar tratado ou registrado como backlog aceito.
 
-- [ ] T031 [P] [US5] `api/src/app.ts`: endurecer a CSP do Helmet (remover `'unsafe-inline'` e `unpkg`/`jsdelivr` do `scriptSrc`/`styleSrc`, agora que o Swagger saiu de prod); confirmar que nada quebra.
-- [ ] T032 [P] [US5] `api/src/app.ts`: revisar o retorno `cb(null, true)` do CORS quando `!origin` (decidir manter para health/curl ou restringir); registrar decisão.
-- [ ] T033 [P] [US5] Criar rotina de limpeza de tokens efêmeros (`DELETE` por data em `AuthToken`/`IdempotencyKey`) como script SQL/`tsx` agendável — sem migration (ver data-model.md).
-- [ ] T034 [P] [US5] Migrar `web/src/app/dashboard/page.tsx` (fetch em client component) para React Query, ou remover a rota legada se não usada.
-- [ ] T035 [P] [US5] Modernizações de front onde agregarem valor: `dvh`/viewport dinâmico, `focus-visible`, `prefers-reduced-motion` (`motion-reduce:*`).
+- [x] T031 [P] [US5] `api/src/app.ts`: CSP do Helmet **condicional** — estrita em produção (`scriptSrc`/`styleSrc` = `'self'`, sem `unsafe-inline`/unpkg/jsdelivr); relaxada só fora de prod (Swagger UI). ✅
+- [x] T032 [P] [US5] `api/src/app.ts`: CORS `!origin → true` mantido (curl/health/server-to-server; não é vetor CSRF — navegador sempre envia Origin, sessão protegida por SameSite). Decisão comentada no código. ✅
+- [x] T033 [P] [US5] `api/src/scripts/cleanup-tokens.ts` (lógica `cleanupEphemeral` exportada + testável) — apaga `AuthToken` expirados/usados e `IdempotencyKey` > 7d; script `pnpm cleanup:tokens`; teste `cleanup-tokens.test.ts` verde. Sem migration. ✅
+- [x] T034 [P] [US5] `web/src/app/dashboard/page.tsx` migrado p/ **React Query** (`useQuery` no fetch; `useEffect` só p/ navegação) — sem `useEffect`-fetch. ✅
+- [x] T035 [P] [US5] `vh → dvh` nos full-screen (landing `page.tsx`, `hero.tsx`, `global-error.tsx`). Os `svh` (estáveis) mantidos. `prefers-reduced-motion`/`focus-visible` já cobertos no canon (CLAUDE.md). ✅
 
 **Checkpoint**: projeto sem débito conhecido da auditoria.
 

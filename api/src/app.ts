@@ -153,20 +153,24 @@ export async function buildApp(): Promise<FastifyInstance> {
       .send({ message: `Route ${req.method}:${path} not found`, error: "Not Found", statusCode: 404 });
   });
 
-  await app.register(helmet, {
-    contentSecurityPolicy: {
-      directives: {
+  // CSP: estrita em produção (API serve só JSON — o Swagger UI não roda em prod). Fora de produção,
+  // libera o necessário para o Swagger UI (CDNs + inline). Endurecimento da auditoria (US5).
+  const cspDirectives = config.isProduction
+    ? {
         defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://unpkg.com",
-          "https://cdn.jsdelivr.net",
-        ],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      }
+    : {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
         imgSrc: ["'self'", "data:", "https:"],
-      },
-    },
+      };
+
+  await app.register(helmet, {
+    contentSecurityPolicy: { directives: cspDirectives },
   });
 
   await app.register(cors, {
@@ -176,6 +180,9 @@ export async function buildApp(): Promise<FastifyInstance> {
         .map((s) => s.trim())
         .filter(Boolean);
 
+      // Sem header Origin (curl, health checks, server-to-server, apps nativos) → permitido.
+      // Não é vetor de CSRF: requisições de navegador cross-site sempre enviam Origin, e a
+      // proteção de sessão é o cookie SameSite. Decisão registrada (auditoria US5).
       if (!origin) {
         cb(null, true);
         return;

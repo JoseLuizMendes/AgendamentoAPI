@@ -30,7 +30,7 @@ export function Hero() {
   }, []);
 
   return (
-    <section className="relative flex min-h-screen flex-col justify-center overflow-hidden">
+    <section className="relative flex min-h-dvh flex-col justify-center overflow-hidden">
       {/* Esfera animada */}
       <div className="pointer-events-none absolute right-0 top-1/2 h-[600px] w-[600px] -translate-y-1/2 opacity-40 lg:h-[800px] lg:w-[800px]">
         <AnimatedSphere />
