@@ -58,10 +58,18 @@ Gerar um JWT_SECRET forte:
 openssl rand -base64 48
 ```
 
-### 1.5 GitHub Secrets (repo → Settings → Secrets and variables → Actions)
+### 1.5 GitHub Secrets + Variables (repo → Settings → Secrets and variables → Actions)
+**Secrets:**
 - `VPS_HOST` — IP/host da VPS
 - `VPS_USER` — usuário SSH
 - `VPS_SSH_KEY` — chave privada SSH (par com a pública instalada na VPS)
+
+**Variables:**
+- `DEPLOY_ENABLED` — defina como `true` **só quando a VPS estiver pronta**. Enquanto não estiver
+  setado, o job de deploy SSH é **pulado** (o build/push das imagens no GHCR continua rodando e
+  valida os Dockerfiles). Isso evita um deploy vermelho enquanto não há VPS.
+- `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT` — usadas no build
+  da imagem do Web. (Secret opcional: `SENTRY_AUTH_TOKEN` para sourcemaps.)
 
 > A imagem é publicada no **GHCR** usando o `GITHUB_TOKEN` automático (não precisa de secret).
 > Garanta que o pacote GHCR seja acessível pela VPS (público, ou `docker login ghcr.io` na VPS).
