@@ -46,9 +46,9 @@ describe("config/loadConfig", () => {
     expect(cfg.corsOrigin).toBe("https://app.exemplo.com");
   });
 
-  it("expõe jwtExpiresIn com default '7d'", () => {
+  it("expõe jwtExpiresIn com default '2d' (sessão curta — hardening)", () => {
     const cfg = loadConfig({ ...base, NODE_ENV: "development" });
-    expect(cfg.jwtExpiresIn).toBe("7d");
+    expect(cfg.jwtExpiresIn).toBe("2d");
   });
 
   it("permite sobrescrever JWT_EXPIRES_IN", () => {

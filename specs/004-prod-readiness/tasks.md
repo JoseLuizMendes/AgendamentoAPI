@@ -85,15 +85,15 @@ saudáveis — por isso US1 vem primeiro e funciona como base para o build/test 
 
 **Independent Test**: login sem `token` no corpo (cookie presente); `/documentation` 404 em prod; 5 headers no Web; rota de workspace redireciona sem sessão.
 
-- [ ] T017 [US3] (TDD-RED) Escrever/ajustar teste de contrato em `api/tests/` asseverando que `POST /auth/login` e `POST /auth/signup` **não** retornam `token` no corpo e **definem** `Set-Cookie: token=...; HttpOnly` — confirmar que falha (RED).
-- [ ] T018 [US3] Remover `token` do corpo em `api/src/routes/auth.ts` (`/login` e `/signup`) e atualizar os schemas de resposta Zod em `api/src/schemas/index.ts`; manter o `setCookie` com `maxAge` de 2 dias (GREEN do T017).
-- [ ] T019 [US3] `api/src/config.ts`: `JWT_EXPIRES_IN` default `"2d"`; conferir derivação do `cookieSecure`/`maxAge`.
-- [ ] T020 [US3] (TDD) Teste em `api/tests/` cobrindo que o Swagger/`/documentation` **não** é registrado quando `NODE_ENV=production` (404), e segue disponível fora de prod.
-- [ ] T021 [US3] `api/src/app.ts`: registrar `@fastify/swagger` + `swagger-ui` apenas quando `!config.isProduction`; ajustar a allowlist do `onRequest` (auth) e do `rate-limit` para não referenciar `/docs`/`/documentation` em prod (GREEN do T020).
-- [ ] T022 [P] [US3] `web/next.config.ts`: `headers()` com HSTS, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`; `poweredByHeader: false`.
-- [ ] T023 [P] [US3] Criar o gate de rota do Web (`web/src/proxy.ts` ou `middleware.ts` — confirmar nome no Next 16 via C7): redirecionar para `/login` quando não houver cookie de sessão em `/[tenant]/*` (verificação otimista: só presença do cookie).
-- [ ] T024 [US3] Registrar a decisão de CSRF (manter `SameSite=lax` + CORS estrito; token anti-CSRF como item futuro) em `research.md`/comentário no código; sem mudança funcional se a decisão for manter.
-- [ ] T025 [US3] Verificar suites verdes (API tsc+test+integração; Web tsc+lint+build+test) e validar headers/redirect via quickstart US3.
+- [x] T017 [US3] (TDD) Teste de contrato `api/tests/integration/auth-contract.test.ts`: `/login` e `/signup` **sem** `token` no corpo e **com** `Set-Cookie token HttpOnly`. (Integração — roda no CI; `skipIf(!hasDb)`.)
+- [x] T018 [US3] Removido `token` do corpo em `api/src/routes/auth.ts` (`/login` e `/signup`); cookie `maxAge` 2d. _Sem schema de response p/ esses endpoints (token só ia no `reply.send`)._ Testes de integração migrados para extrair o token do **cookie** (8 arquivos).
+- [x] T019 [US3] `config.ts`: `JWT_EXPIRES_IN` default `"2d"`. Testes `config.test.ts` e `auth-token.test.ts` atualizados (172800s). ✅
+- [x] T020 [US3] (TDD) `api/tests/unit/swagger-gating.test.ts`: prod → `GET /docs` 404 e `/` 200; dev → `/docs` disponível. ✅ verde.
+- [x] T021 [US3] `app.ts`: Swagger só `!isProduction`; em prod, `GET /` mínimo (discovery). ✅
+- [x] T022 [P] [US3] `web/next.config.ts`: `headers()` (HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy) + `poweredByHeader:false`. ✅ build verde.
+- [x] T023 [P] [US3] `web/src/proxy.ts` (Next 16 — confirmado no build: `ƒ Proxy (Middleware)`): redireciona p/ `/login` sem cookie de sessão fora das rotas públicas. + `COOKIE_DOMAIN` na API (cookie cross-subdomínio legível pelo gate).
+- [x] T024 [US3] CSRF: decisão `SameSite=lax` + CORS estrito (mitiga POST cross-site; preflight obrigatório por JSON) registrada em `research.md`. Token anti-CSRF = backlog.
+- [x] T025 [US3] Verificado local: API `tsc` ✅ + 95 unit ✅; Web `tsc` ✅ + `lint` ✅ + `build` ✅. Integração (contrato + suíte migrada) roda no **CI** (sem DB/Docker local).
 
 **Checkpoint**: sessão e navegador endurecidos sem mudança de produto.
 

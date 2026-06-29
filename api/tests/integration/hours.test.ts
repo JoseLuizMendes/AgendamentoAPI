@@ -35,7 +35,7 @@ describe.skipIf(!hasDb)("integration/hours", () => {
         tenantSlug: "studio",
       },
     });
-    ownerToken = signup.json().token;
+    ownerToken = signup.cookies.find((c) => c.name === "token")?.value ?? "";
   });
 
   async function createDay() {

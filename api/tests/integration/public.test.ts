@@ -39,7 +39,7 @@ describe.skipIf(!hasDb)("integration/public (auto-agendamento)", () => {
         tenantSlug: slug,
       },
     });
-    ownerToken = signup.json().token;
+    ownerToken = signup.cookies.find((c) => c.name === "token")?.value ?? "";
 
     const svc = await app.inject({
       method: "POST",

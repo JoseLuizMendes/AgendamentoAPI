@@ -201,7 +201,16 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
-  await app.register(swaggerPlugin);
+  // Documentação interativa (Swagger UI em /docs) só FORA de produção — não expõe a superfície
+  // completa da API em prod. Em produção, mantém apenas um GET / mínimo para discovery/probe.
+  if (!config.isProduction) {
+    await app.register(swaggerPlugin);
+  } else {
+    app.get("/", { schema: { hide: true } }, (_req, reply) =>
+      reply.send({ name: "Agendamento API", status: "ok" })
+    );
+  }
+
   await app.register(prismaPlugin);
   await app.register(authPlugin);
 

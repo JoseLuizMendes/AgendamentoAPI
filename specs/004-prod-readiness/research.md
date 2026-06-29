@@ -94,6 +94,12 @@ autorização real continua na API).
 **Alternativas**: validar o JWT no edge — exigiria compartilhar o segredo com o Web (rejeitado); só
 client-side — mantém o flash de tela.
 
+**Consequência (cookie cross-subdomínio):** com Web em `app.<dominio>` e API em `api.<dominio>`, o
+cookie de sessão precisa de `Domain=.<dominio>` para (a) ser enviado à API a partir do Web e (b) ser
+**legível pelo gate** do Web. Adicionado `COOKIE_DOMAIN` (env, opcional) ao `config.ts` e aos
+`setCookie`/`clearCookie`. Em dev (localhost), fica vazio (host-only; localhost já é compartilhado
+entre portas). O nome `proxy.ts` (Next 16) foi confirmado no build (`ƒ Proxy (Middleware)`).
+
 ## 9. CSRF
 
 **Decisão**: manter `SameSite` configurável; avaliar `strict` para o domínio do workspace. Com cookie

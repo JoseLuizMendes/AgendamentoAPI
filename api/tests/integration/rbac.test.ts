@@ -44,7 +44,7 @@ describe.skipIf(!hasDb)("integration/rbac", () => {
       },
     });
     const ownerResult = signup.json();
-    ownerToken = ownerResult.token;
+    ownerToken = signup.cookies.find((c) => c.name === "token")?.value ?? "";
     tenantId = ownerResult.user.tenantId;
 
     // Create staff user
@@ -72,7 +72,7 @@ describe.skipIf(!hasDb)("integration/rbac", () => {
       },
     });
     const staffResult = loginStaff.json();
-    staffToken = staffResult.token;
+    staffToken = loginStaff.cookies.find((c) => c.name === "token")?.value ?? "";
 
     // Create customer user
     const createCustomer = await app.inject({
@@ -99,7 +99,7 @@ describe.skipIf(!hasDb)("integration/rbac", () => {
       },
     });
     const customerResult = loginCustomer.json();
-    customerToken = customerResult.token;
+    customerToken = loginCustomer.cookies.find((c) => c.name === "token")?.value ?? "";
 
     // Create a service for testing
     const createService = await app.inject({

@@ -30,7 +30,7 @@ describe.skipIf(!hasDb)("integration/reports", () => {
       url: "/auth/signup",
       payload: { email: "owner@example.com", password: "password123", tenantName: "Clinica", tenantSlug: "clinica" },
     });
-    token = signup.json().token;
+    token = signup.cookies.find((c) => c.name === "token")?.value ?? "";
   });
 
   async function createService(name: string, priceInCents: number, durationInMinutes: number): Promise<number> {
