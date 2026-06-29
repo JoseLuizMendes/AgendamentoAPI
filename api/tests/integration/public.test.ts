@@ -3,13 +3,22 @@ import { buildApp } from "../../src/app.js";
 
 const hasDb = Boolean(process.env["DATABASE_URL"]);
 
+/** Próxima segunda-feira futura (ver availability.test.ts) — evita time-bomb de data hardcoded. */
+function futureMonday(): string {
+  const d = new Date();
+  d.setUTCHours(12, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + 14);
+  while (d.getUTCDay() !== 1) d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 describe.skipIf(!hasDb)("integration/public (auto-agendamento)", () => {
   let app: Awaited<ReturnType<typeof buildApp>>;
   let ownerToken: string;
   let serviceId: number;
 
   const slug = "clinica";
-  const date = "2026-06-15"; // segunda
+  const date = futureMonday(); // segunda-feira futura
 
   beforeAll(async () => {
     app = await buildApp();
@@ -81,7 +90,7 @@ describe.skipIf(!hasDb)("integration/public (auto-agendamento)", () => {
         customerName: "Cliente Web",
         customerPhone: "551111111111",
         serviceId,
-        startTime: "2026-06-15T14:00:00.000Z",
+        startTime: `${date}T14:00:00.000Z`,
       },
     });
     expect(res.statusCode).toBe(403);
@@ -102,7 +111,7 @@ describe.skipIf(!hasDb)("integration/public (auto-agendamento)", () => {
         customerName: "Cliente Web",
         customerPhone: "551111111111",
         serviceId,
-        startTime: "2026-06-15T14:00:00.000Z",
+        startTime: `${date}T14:00:00.000Z`,
       },
     });
     expect(res.statusCode).toBe(201);
