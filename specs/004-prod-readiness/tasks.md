@@ -105,11 +105,11 @@ saudáveis — por isso US1 vem primeiro e funciona como base para o build/test 
 
 **Independent Test**: só `pnpm-lock.yaml`; `redis` ausente do compose; `.env.example` presentes; CI falha em crítico.
 
-- [ ] T026 [P] [US4] Remover `package-lock.json` da raiz e de `api/` (canon pnpm); confirmar `git ls-files | grep package-lock` vazio.
-- [ ] T027 [P] [US4] Criar `.gitignore` na raiz (node_modules, dist, .next, .env*, etc.) e `api/.env.example` espelhando as chaves de `api/src/config.ts` (sem valores reais).
-- [ ] T028 [US4] `api/docker-compose.yml`: remover o serviço `redis` e o `depends_on: redis` da API; registrar a decisão (reintroduzir só com fila/escala/denylist) em `api/CLAUDE.md` ou `research.md`.
-- [ ] T029 [US4] `.github/workflows/ci.yml`: tornar `pnpm audit --audit-level=critical` **bloqueante** (remover `continue-on-error`) após a US1 zerar os atuais.
-- [ ] T030 [US4] `api/DEPLOY.md`: adicionar seção de **backup** (snapshot/branch Neon antes do deploy) e **rollback** de migração que falha (`prisma migrate resolve` / restaurar branch).
+- [x] T026 [P] [US4] Removidos `package-lock.json` (raiz + `api/`) + cruft da raiz (`package.json`/`pnpm-lock.yaml` stray) + **`node_modules` desrastreado** (1568 arquivos commitados por acidente). `git ls-files | grep package-lock` vazio. ✅
+- [x] T027 [P] [US4] Criado `.gitignore` na raiz (node_modules, lockfiles npm, builds, .env*). `api/.env.example` criado na US2; `web/.gitignore` passou a versionar `.env.example`. ✅
+- [x] T028 [US4] `docker-compose.yml`: removidos serviço `redis`, `depends_on` e volume `redisdata`; decisão registrada (comentário no compose + research.md). ✅ `docker compose config` válido.
+- [x] T029 [US4] `ci.yml`: `pnpm audit --audit-level=critical` **bloqueante** (sem `continue-on-error`) nos dois jobs (api + web). ✅
+- [x] T030 [US4] `api/DEPLOY.md`: seção "Backup & Rollback de migrations" (snapshot/branch Neon, `prisma migrate resolve --rolled-back`, repin de imagem por `:sha`, migrations em 2 fases). ✅
 
 **Checkpoint**: repositório e deploy coerentes e à prova de pegadinha.
 

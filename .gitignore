@@ -1,0 +1,31 @@
+# ===== .gitignore da raiz =====
+# Os projetos reais vivem em api/ e web/ (cada um com seu pnpm-lock.yaml versionado).
+# A raiz NÃO é um workspace pnpm — não deve ter package.json/node_modules.
+
+# Dependências
+node_modules/
+
+# Lockfiles npm/yarn (canon = pnpm; npm/yarn banidos)
+package-lock.json
+yarn.lock
+
+# Builds
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# Ambiente (segredos) — exemplos são versionados
+.env
+.env.*
+!.env.example
+
+# Logs / OS / IDE
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+*.swp

@@ -131,3 +131,39 @@ docker compose ps                   # status/health dos serviços
 docker compose restart api          # reinicia a API
 docker compose pull && docker compose up -d   # atualiza para a última imagem
 ```
+
+---
+
+## 6. Backup & Rollback de migrations
+
+O `docker-entrypoint.sh` roda `prisma migrate deploy` antes de subir o servidor. Para uma migração
+nunca deixar o banco num estado ruim sem volta:
+
+### Antes do deploy (backup)
+- **Neon (recomendado):** crie um **branch/snapshot** da branch de produção antes do deploy. O
+  branch é instantâneo e serve como ponto de restauração:
+  - Console Neon → Branches → "Create branch" a partir de `production` (ou snapshot/Point-in-Time).
+- **Alternativa (dump):** `pg_dump "$DIRECT_DATABASE_URL" > backup-$(date +%F).sql` numa máquina com
+  acesso ao banco.
+
+### Se a migração falhar no deploy
+1. O contêiner da API **não sobe** (o entrypoint aborta no `migrate deploy` com `set -e`); o Caddy
+   segue servindo a versão anterior se ela ainda estiver no ar (`restart: unless-stopped`).
+2. Diagnóstico: `docker compose logs api` → ver o erro do `migrate deploy`.
+3. **Migração parcial/`failed`:** marcar como revertida e restaurar:
+   ```bash
+   # Dentro do container/host com o CLI do Prisma e DIRECT_DATABASE_URL:
+   npx prisma migrate resolve --rolled-back <nome_da_migration>
+   ```
+   e **restaurar o branch/snapshot Neon** criado no passo de backup (ou `psql < backup-*.sql`).
+4. Repinar a imagem na tag anterior e subir de novo:
+   ```bash
+   # No .env da VPS, fixe API_IMAGE/WEB_IMAGE na tag :sha da versão estável anterior, então:
+   docker compose pull && docker compose up -d
+   ```
+
+### Boas práticas
+- **Migrations aditivas** (colunas com default; ver `prisma/CLAUDE.md`) raramente exigem rollback.
+- Mudanças destrutivas (drop de coluna) em **duas fases**: deploy 1 para de usar a coluna; deploy 2
+  a remove — assim o rollback do deploy 2 não perde dados.
+- Imagens são tagueadas por `:sha` (ver `deploy.yml`) — sempre há uma tag estável para voltar.

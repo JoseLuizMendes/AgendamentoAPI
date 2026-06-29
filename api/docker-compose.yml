@@ -13,8 +13,6 @@ services:
     image: ${API_IMAGE:-ghcr.io/CHANGE_ME/agendamento-api:latest}
     restart: unless-stopped
     env_file: .env
-    depends_on:
-      - redis
     healthcheck:
       test:
         - CMD
@@ -44,11 +42,8 @@ services:
     expose:
       - "3000"
 
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    volumes:
-      - redisdata:/data
+  # NOTA: Redis foi removido (não era usado pelo código). Reintroduzir só quando houver
+  # fila/jobs em background, escala horizontal (rate-limit distribuído) ou denylist de JWT.
 
   caddy:
     image: caddy:2-alpine
@@ -68,6 +63,5 @@ services:
       - caddy_config:/config
 
 volumes:
-  redisdata:
   caddy_data:
   caddy_config:
