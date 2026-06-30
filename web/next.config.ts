@@ -15,14 +15,17 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), browsing-topics=()" },
 ];
 
+// `output: standalone` (+ tracingRoot) é para deploy em CONTÊINER (Docker na VPS): gera
+// `.next/standalone` com server.js mínimo (ver web/Dockerfile). Na **Vercel** isso QUEBRA o build
+// (ela usa o próprio output/adapter), então essas opções só valem FORA da Vercel. Detecção via a
+// env `VERCEL` (que a Vercel injeta no build). Assim os dois alvos funcionam sem migração agora.
+const isVercel = Boolean(process.env.VERCEL);
+const containerOutput: NextConfig = isVercel
+  ? {}
+  : { output: "standalone", outputFileTracingRoot: import.meta.dirname };
+
 const nextConfig: NextConfig = {
-  // Empacotamento autônomo para deploy em contêiner (Docker na VPS): gera `.next/standalone`
-  // com apenas os arquivos necessários + um `server.js` mínimo. Ver web/Dockerfile.
-  output: "standalone",
-  // Há um pnpm-lock.yaml na raiz do repo; sem isto o Next inferiria o root do monorepo lá em
-  // cima e aninharia o standalone em `standalone/web/`. Fixar a raiz de tracing nesta pasta
-  // mantém o pacote plano (`standalone/server.js`).
-  outputFileTracingRoot: import.meta.dirname,
+  ...containerOutput,
   // Não revelar a tecnologia no header `X-Powered-By`.
   poweredByHeader: false,
   async headers() {
