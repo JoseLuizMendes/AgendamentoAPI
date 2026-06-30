@@ -56,7 +56,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6 p-6 lg:p-8">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Eyebrow className="mb-3">Indicadores</Eyebrow>
@@ -113,7 +113,7 @@ export default function DashboardPage() {
           ) : (
           <>
           <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-            <Card>
+            <Card className="min-w-0">
               <CardHeader>
                 <CardTitle className="font-display text-xl tracking-wide">Movimento financeiro</CardTitle>
               </CardHeader>
@@ -152,8 +152,8 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <MovementCard byWeekday={summary.byWeekday} byHour={summary.byHour} />
-            <Card>
+            <MovementCard className="min-w-0" byWeekday={summary.byWeekday} byHour={summary.byHour} />
+            <Card className="min-w-0">
               <CardHeader>
                 <CardTitle className="font-display text-xl tracking-wide">Funil de status</CardTitle>
               </CardHeader>

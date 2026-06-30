@@ -65,7 +65,9 @@ Exceções aprovadas vivem aqui e no `CLAUDE.md` raiz (ex.: backend Fastify puro
 Vitest ligado no `web` para lógica pura de UI; **Apache ECharts** no gráfico "Movimento financeiro"
 do dashboard — zoom wheel/pinça nativo via `dataZoom: inside`, 2026-06-28; Recharts segue padrão no
 restante; **Sentry** — `@sentry/node` (OTel-based, portável) + `@sentry/nextjs` — para observabilidade
-de produção (erros + tracing SaaS), 2026-06-29, spec 005).
+de produção (erros + tracing SaaS), 2026-06-29, spec 005; **`@fullcalendar/list`** — vista de lista
+(estilo "Agenda" do Google/Samsung) como padrão da agenda no mobile, com alternância para a grade
+"Dia", 2026-06-30; faz parte do ecossistema FullCalendar 6 já no canon).
 
 ## Quality Gates & Workflow
 
