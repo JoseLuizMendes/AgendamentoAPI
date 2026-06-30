@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
+import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import type {
@@ -21,11 +22,13 @@ import { toast } from "sonner";
 import { apiRequest, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useMounted } from "@/lib/use-mounted";
+import { useIsMobile } from "@/lib/use-media-query";
 import { useTenant } from "@/components/tenant/tenant-context";
 import { STATUS_META } from "@/components/tenant/shared";
 import type { Appointment, Service } from "@/components/tenant/types";
 import { serviceColor, statusColor, type ColorMode } from "./colors";
 import { computeLockedBands, isAvailable, type Interval } from "./availability";
+import { calendarLayout } from "./layout";
 import { phaseOf, PHASE_CLASS } from "./phase";
 import { AppointmentCreateDrawer } from "./appointment-create-drawer";
 import { AppointmentDetailDrawer } from "./appointment-detail-drawer";
@@ -49,6 +52,8 @@ export function AgendaCalendar() {
   const queryClient = useQueryClient();
 
   const mounted = useMounted();
+  const isMobile = useIsMobile();
+  const layout = calendarLayout(isMobile);
   const [now, setNow] = useState(() => Date.now());
   const [range, setRange] = useState<{
     startISO: string;
@@ -235,6 +240,18 @@ export function AgendaCalendar() {
       return <div className="px-1 py-0.5 text-[11px] font-medium leading-tight">{arg.timeText}</div>;
     }
     const service = a.service ?? services.find((s) => s.id === a.serviceId);
+
+    // Vista lista (mobile, estilo "Agenda"): a hora e o ponto de cor já vêm em colunas próprias
+    // da lista — o conteúdo do evento é só o título (cliente + serviço), sem duplicar a hora.
+    if (arg.view.type.startsWith("list")) {
+      return (
+        <div className="flex min-w-0 flex-col">
+          <span className="truncate font-semibold">{a.customerName}</span>
+          {service ? <span className="text-muted-foreground truncate text-xs">{service.name}</span> : null}
+        </div>
+      );
+    }
+
     const start = arg.event.start;
     const end = arg.event.end;
     const durationMin = start && end ? (end.getTime() - start.getTime()) / 60000 : 60;
@@ -266,10 +283,15 @@ export function AgendaCalendar() {
   return (
     <div className="flex h-full flex-col">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <ColorLegend mode={colorMode} services={services} />
-        <div className="flex items-center gap-2">
+        {/* Legenda e alternância de cor só no desktop — na lista do mobile poluem e tomam altura. */}
+        <div className="hidden min-w-0 lg:flex">
+          <ColorLegend mode={colorMode} services={services} />
+        </div>
+        <div className="ml-auto flex items-center gap-2">
           <TriagePanel onResolved={reload} />
-          <ColorModeToggle mode={colorMode} onChange={changeColorMode} />
+          <div className="hidden lg:block">
+            <ColorModeToggle mode={colorMode} onChange={changeColorMode} />
+          </div>
         </div>
       </div>
 
@@ -282,16 +304,18 @@ export function AgendaCalendar() {
       ) : null}
       {mounted ? (
         <FullCalendar
-          plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
+          // Remonta ao cruzar o breakpoint p/ a view inicial (lista x semana) acompanhar o device.
+          key={isMobile ? "mobile" : "desktop"}
+          plugins={[timeGridPlugin, dayGridPlugin, listPlugin, interactionPlugin]}
+          initialView={layout.initialView}
           locale={ptBrLocale}
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "novo timeGridWeek,timeGridDay,dayGridMonth",
-          }}
+          headerToolbar={layout.headerToolbar}
           customButtons={{ novo: { text: "+ Novo", click: openCreateDefault } }}
-          buttonText={{ today: "Hoje", week: "Semana", day: "Dia", month: "Mês" }}
+          buttonText={{ today: "Hoje", week: "Semana", day: "Dia", month: "Mês", list: "Agenda" }}
+          // Toque: long-press curto p/ arrastar/redimensionar e selecionar na grade ("Dia") do mobile.
+          longPressDelay={250}
+          eventLongPressDelay={250}
+          selectLongPressDelay={250}
           allDaySlot={false}
           slotDuration="00:15:00"
           snapDuration="00:15:00"

@@ -90,8 +90,10 @@ export function FinanceChart({ data, height = 260 }: { data: Point[]; height?: n
           return `<div style="font-weight:600;margin-bottom:2px">${label}</div>${lines}`;
         },
       },
-      // Zoom por scroll do mouse (PC) e pinça (mobile), sem barra.
-      dataZoom: [{ type: "inside", zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: false }],
+      // Zoom por scroll do mouse (PC) e pinça (mobile), sem barra. O pan de 1 dedo fica desligado
+      // (`moveOnMouseMove:false`) e o container usa `touch-action: pan-y` → no celular, 1 dedo rola a
+      // página e 2 dedos (pinça) dão zoom no gráfico, sem sequestrar o scroll.
+      dataZoom: [{ type: "inside", zoomOnMouseWheel: true, moveOnMouseMove: false, moveOnMouseWheel: false }],
       xAxis: {
         type: "category",
         data: data.map((d) => d.label),
@@ -140,5 +142,7 @@ export function FinanceChart({ data, height = 260 }: { data: Point[]; height?: n
     chart.setOption(option, true);
   }, [data, resolvedTheme]);
 
-  return <div ref={ref} className="text-foreground w-full" style={{ height }} />;
+  // `touch-action: pan-y` libera a rolagem vertical da página (1 dedo) sobre o gráfico; a pinça
+  // (2 dedos) continua dando zoom no ECharts.
+  return <div ref={ref} className="text-foreground w-full" style={{ height, touchAction: "pan-y" }} />;
 }

@@ -434,3 +434,74 @@
   background: var(--muted-foreground);
   opacity: 0.08;
 }
+
+/* ===== Vista lista / "Agenda" (padrão no mobile) ========================= */
+.fc {
+  --fc-list-event-hover-bg-color: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+/* Cabeçalho de cada dia: tipografia da marca, fundo sutil, fica grudado ao rolar. */
+.fc .fc-list-day-cushion {
+  background: var(--muted);
+  padding: 0.6rem 1rem;
+}
+.fc .fc-list-day-text,
+.fc .fc-list-day-side-text {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--foreground);
+  text-transform: capitalize;
+  text-decoration: none;
+}
+/* Linhas de evento com alvo de toque confortável; hora em destaque sutil. */
+.fc .fc-list-event {
+  cursor: pointer;
+}
+.fc .fc-list-event td {
+  padding: 0.7rem 1rem;
+}
+.fc .fc-list-event-time {
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fc .fc-list-event-title {
+  color: var(--foreground);
+}
+/* Eventos resolvidos (concluído/faltou/cancelado): desbotados também na lista. */
+.fc .fc-list-event.fc-appt-muted .fc-list-event-title {
+  text-decoration: line-through;
+  color: var(--muted-foreground);
+}
+.fc .fc-list-event.fc-appt-resolved {
+  opacity: 0.55;
+}
+/* Estado vazio (semana sem agendamentos) coerente com o resto. */
+.fc .fc-list-empty {
+  background: transparent;
+  color: var(--muted-foreground);
+}
+/* Anéis de fase (awaiting/overdue/now) são desenhados como `box-shadow` p/ os blocos da grade —
+   numa linha de tabela da lista viram traços atravessados (e o vermelho lembra a "linha de agora").
+   Na lista a triagem já aparece no badge do sino → some com os anéis aqui. */
+.fc .fc-list-event.fc-appt-awaiting,
+.fc .fc-list-event.fc-appt-overdue,
+.fc .fc-list-event.fc-appt-now {
+  box-shadow: none;
+}
+
+/* ===== Toolbar responsiva (telas estreitas) ============================= */
+@media (max-width: 480px) {
+  .fc .fc-toolbar.fc-header-toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 1.125rem;
+  }
+  .fc .fc-button {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+  }
+}

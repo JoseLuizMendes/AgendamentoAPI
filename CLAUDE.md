@@ -177,6 +177,11 @@ são apenas os **não-fetch** (`setMounted`, `theme-toggle`, `hero`) — qualque
   tracing de produção via SaaS (em vez de auto-hospedar Grafana/Loki/Prometheus na VPS única). O SDK
   Node v8+ é **OTel-based** (instrumentação portável → troca de backend possível sem reinstrumentar).
   Gateado por DSN (sem credencial = no-op; dev não envia). Scrub de dados sensíveis via `beforeSend`.
+- **Agenda mobile: `@fullcalendar/list`** — 2026-06-30, aprovado pelo dev. Vista de lista (estilo
+  "Agenda" do Google/Samsung Agenda) como padrão da agenda em telas `< lg`, com botão para alternar
+  para a grade "Dia" (`timeGridDay`, que mantém drag/drop por toque). Desktop segue na semana
+  (`timeGridWeek`). Pacote irmão dos `@fullcalendar/*` já no canon (mesma versão `^6.1.20`); estilos
+  via JS (sem CSS extra). Tema da lista só com tokens no `globals.css`.
 - _(novas exceções entram aqui, com data e justificativa, via C6)_
 
 <!-- SPECKIT START -->
