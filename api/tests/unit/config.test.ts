@@ -46,9 +46,40 @@ describe("config/loadConfig", () => {
     expect(cfg.corsOrigin).toBe("https://app.exemplo.com");
   });
 
-  it("expõe jwtExpiresIn com default '7d'", () => {
+  it("expõe jwtExpiresIn com default '2d' (sessão curta — hardening)", () => {
     const cfg = loadConfig({ ...base, NODE_ENV: "development" });
-    expect(cfg.jwtExpiresIn).toBe("7d");
+    expect(cfg.jwtExpiresIn).toBe("2d");
+  });
+
+  it("observabilidade desligada sem SENTRY_DSN (config.sentry = null)", () => {
+    const cfg = loadConfig({ ...base, NODE_ENV: "production", JWT_SECRET: "x".repeat(40) });
+    expect(cfg.sentry).toBeNull();
+  });
+
+  it("com SENTRY_DSN, monta config.sentry com sample rate default por ambiente", () => {
+    const prod = loadConfig({
+      ...base,
+      NODE_ENV: "production",
+      JWT_SECRET: "x".repeat(40),
+      SENTRY_DSN: "https://k@o0.ingest.sentry.io/1",
+    });
+    expect(prod.sentry?.dsn).toBe("https://k@o0.ingest.sentry.io/1");
+    expect(prod.sentry?.environment).toBe("production");
+    expect(prod.sentry?.tracesSampleRate).toBe(0.1); // default de produção
+
+    const dev = loadConfig({ ...base, NODE_ENV: "development", SENTRY_DSN: "https://k@o0.ingest.sentry.io/1" });
+    expect(dev.sentry?.tracesSampleRate).toBe(1.0); // default de dev
+  });
+
+  it("permite sobrescrever SENTRY_TRACES_SAMPLE_RATE", () => {
+    const cfg = loadConfig({
+      ...base,
+      NODE_ENV: "production",
+      JWT_SECRET: "x".repeat(40),
+      SENTRY_DSN: "https://k@o0.ingest.sentry.io/1",
+      SENTRY_TRACES_SAMPLE_RATE: "0.25",
+    });
+    expect(cfg.sentry?.tracesSampleRate).toBe(0.25);
   });
 
   it("permite sobrescrever JWT_EXPIRES_IN", () => {

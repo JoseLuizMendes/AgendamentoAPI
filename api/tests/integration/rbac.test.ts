@@ -15,14 +15,10 @@ describe.skipIf(!hasDb)("integration/rbac", () => {
   beforeAll(async () => {
     app = await buildApp();
     await app.ready();
-  });
 
-  afterAll(async () => {
-    await app.close();
-  });
-
-  beforeEach(async () => {
-    // Clean database
+    // Cria os 3 papéis UMA vez. Os logins de staff/customer ficam FORA do beforeEach para não
+    // estourar o rate limit de /auth/login (10/min) ao longo dos ~9 testes. Os dados mutáveis por
+    // teste (serviços, agendamentos, horários) são limpos/recriados no beforeEach.
     await app.prisma.appointment.deleteMany();
     await app.prisma.businessBreak.deleteMany();
     await app.prisma.businessHours.deleteMany();
@@ -31,7 +27,6 @@ describe.skipIf(!hasDb)("integration/rbac", () => {
     await app.prisma.user.deleteMany();
     await app.prisma.tenant.deleteMany();
 
-    // Create tenant and owner
     const signup = await app.inject({
       method: "POST",
       url: "/auth/signup",
@@ -44,76 +39,57 @@ describe.skipIf(!hasDb)("integration/rbac", () => {
       },
     });
     const ownerResult = signup.json();
-    ownerToken = ownerResult.token;
+    ownerToken = signup.cookies.find((c) => c.name === "token")?.value ?? "";
     tenantId = ownerResult.user.tenantId;
 
-    // Create staff user
     const createStaff = await app.inject({
       method: "POST",
       url: "/users",
       headers: { authorization: `Bearer ${ownerToken}` },
-      payload: {
-        email: "staff@example.com",
-        password: "password123",
-        name: "Staff Member",
-        role: "STAFF",
-      },
+      payload: { email: "staff@example.com", password: "password123", name: "Staff Member", role: "STAFF" },
     });
     expect(createStaff.statusCode).toBe(201);
-    
-    // Login as staff
     const loginStaff = await app.inject({
       method: "POST",
       url: "/auth/login",
-      payload: {
-        email: "staff@example.com",
-        password: "password123",
-        tenantSlug: "test-tenant",
-      },
+      payload: { email: "staff@example.com", password: "password123", tenantSlug: "test-tenant" },
     });
-    const staffResult = loginStaff.json();
-    staffToken = staffResult.token;
+    staffToken = loginStaff.cookies.find((c) => c.name === "token")?.value ?? "";
 
-    // Create customer user
     const createCustomer = await app.inject({
       method: "POST",
       url: "/users",
       headers: { authorization: `Bearer ${ownerToken}` },
-      payload: {
-        email: "customer@example.com",
-        password: "password123",
-        name: "Customer",
-        role: "CUSTOMER",
-      },
+      payload: { email: "customer@example.com", password: "password123", name: "Customer", role: "CUSTOMER" },
     });
     expect(createCustomer.statusCode).toBe(201);
-    
-    // Login as customer
     const loginCustomer = await app.inject({
       method: "POST",
       url: "/auth/login",
-      payload: {
-        email: "customer@example.com",
-        password: "password123",
-        tenantSlug: "test-tenant",
-      },
+      payload: { email: "customer@example.com", password: "password123", tenantSlug: "test-tenant" },
     });
-    const customerResult = loginCustomer.json();
-    customerToken = customerResult.token;
+    customerToken = loginCustomer.cookies.find((c) => c.name === "token")?.value ?? "";
+  });
 
-    // Create a service for testing
+  afterAll(async () => {
+    await app.close();
+  });
+
+  beforeEach(async () => {
+    // Limpa só os dados mutáveis por teste; mantém tenant/users/tokens estáveis (criados no beforeAll).
+    await app.prisma.appointment.deleteMany();
+    await app.prisma.businessBreak.deleteMany();
+    await app.prisma.businessHours.deleteMany();
+    await app.prisma.businessDateOverride.deleteMany();
+    await app.prisma.service.deleteMany();
+
     const createService = await app.inject({
       method: "POST",
       url: "/services",
       headers: { authorization: `Bearer ${ownerToken}` },
-      payload: {
-        name: "Test Service",
-        priceInCents: 5000,
-        durationInMinutes: 60,
-      },
+      payload: { name: "Test Service", priceInCents: 5000, durationInMinutes: 60 },
     });
-    const service = createService.json();
-    serviceId = service.id;
+    serviceId = createService.json().id;
   });
 
   describe("Service Management Permissions", () => {

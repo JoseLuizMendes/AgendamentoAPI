@@ -14,7 +14,7 @@ const EnvSchema = z
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     DATABASE_URL: z.string().min(1).optional(),
     JWT_SECRET: z.string().optional(),
-    JWT_EXPIRES_IN: z.string().min(1).default("7d"),
+    JWT_EXPIRES_IN: z.string().min(1).default("2d"),
     PORT: z.coerce.number().int().positive().default(3000),
     HOST: z.string().min(1).default("0.0.0.0"),
     CORS_ORIGIN: z.string().min(1).default("http://localhost:3001"),
@@ -26,6 +26,10 @@ const EnvSchema = z
     // Cookie de auth: "lax" p/ mesma-site (subdomínios/reverse proxy); "none" p/ cross-site
     // (força secure). Ajustável por deploy sem mexer no código.
     COOKIE_SAMESITE: z.enum(["lax", "strict", "none"]).default("lax"),
+    // Domínio do cookie de sessão. Em produção com subdomínios (app./api.), usar ".dominio.com"
+    // para o cookie ser compartilhado entre o Web e a API (e legível pelo gate do Web). Sem valor
+    // = cookie host-only (default — bom para dev em localhost).
+    COOKIE_DOMAIN: z.string().min(1).optional(),
     PUBLIC_HEALTH: z
       .string()
       .optional()
@@ -40,6 +44,11 @@ const EnvSchema = z
     RESEND_FROM: z.string().min(1).optional(),
     // Base do app web — monta os links de verificação/reset enviados por email.
     APP_BASE_URL: z.string().url().default("http://localhost:3001"),
+    // Observabilidade (Sentry). Sem DSN → desligado (no-op; dev/local não envia nada).
+    SENTRY_DSN: z.string().min(1).optional(),
+    SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+    SENTRY_RELEASE: z.string().min(1).optional(),
+    SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production") {
@@ -68,6 +77,7 @@ export type Config = {
   loginLockMinutes: number;
   cookieSameSite: "lax" | "strict" | "none";
   cookieSecure: boolean;
+  cookieDomain: string | undefined;
   publicHealth: boolean;
   appBaseUrl: string;
   resend: { apiKey: string; from: string } | null;
@@ -77,6 +87,12 @@ export type Config = {
     apiSecret: string;
     uploadFolder?: string;
     allowedFormats: string;
+  } | null;
+  sentry: {
+    dsn: string;
+    environment: string;
+    release: string | undefined;
+    tracesSampleRate: number;
   } | null;
 };
 
@@ -106,6 +122,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         }
       : null;
 
+  // Sem DSN ⇒ observabilidade desligada. tracesSampleRate default: dev 1.0 / prod 0.1.
+  const sentry = e.SENTRY_DSN
+    ? {
+        dsn: e.SENTRY_DSN,
+        environment: e.SENTRY_ENVIRONMENT ?? e.NODE_ENV,
+        release: e.SENTRY_RELEASE,
+        tracesSampleRate: e.SENTRY_TRACES_SAMPLE_RATE ?? (e.NODE_ENV === "production" ? 0.1 : 1.0),
+      }
+    : null;
+
   return {
     nodeEnv: e.NODE_ENV,
     isProduction: e.NODE_ENV === "production",
@@ -122,10 +148,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     cookieSameSite: e.COOKIE_SAMESITE,
     // SameSite=None exige Secure (regra do browser); em prod sempre Secure.
     cookieSecure: e.NODE_ENV === "production" || e.COOKIE_SAMESITE === "none",
+    cookieDomain: e.COOKIE_DOMAIN,
     publicHealth: e.PUBLIC_HEALTH,
     appBaseUrl: e.APP_BASE_URL,
     resend,
     cloudinary,
+    sentry,
   };
 }
 

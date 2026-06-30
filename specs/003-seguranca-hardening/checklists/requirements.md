@@ -35,4 +35,4 @@
   implementação no corpo dos requisitos.
 - Decisão de produto "login de não-verificado" resolvida com default documentado (permite + aviso),
   evitando marcador de clarificação.
-- US1 e US2 já implementadas e verdes (Fase 1); US3 (email) pendente (Fase 2).
+- US1, US2 e US3 implementadas e verdes (Fases 1 e 2 concluídas; verificado em 2026-06-29).

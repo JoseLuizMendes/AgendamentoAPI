@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiRequest, ApiError } from "@/lib/api";
@@ -58,6 +58,25 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const me = meQuery.data;
   const slugOk = me?.tenant.slug === slug;
 
+  // Checa se o slug é um tenant real (endpoint público) — só quando não é o seu, para distinguir
+  // "slug inexistente" (→ 404) de "não logado" (→ login) e "outro tenant" (→ seu painel).
+  const needsExistenceCheck = slug.length > 0 && !slugOk;
+  const tenantExistsQuery = useQuery({
+    queryKey: ["tenant-exists", slug],
+    queryFn: async (): Promise<boolean> => {
+      try {
+        await apiRequest(`/public/${encodeURIComponent(slug)}/services`);
+        return true;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) return false;
+        return true; // erro de rede/servidor → não força 404; segue o fluxo normal
+      }
+    },
+    enabled: needsExistenceCheck,
+    retry: false,
+  });
+  const tenantMissing = needsExistenceCheck && tenantExistsQuery.data === false;
+
   const servicesQuery = useQuery({
     queryKey: ["services"],
     queryFn: () => apiRequest<Service[]>("/services"),
@@ -82,13 +101,16 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   // Redirects imperativos (navegação — não é fetch nem setState).
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Slug inexistente vira 404 (no render) — não redireciona; aguarda a checagem confirmar
+    // que o tenant existe antes de mandar para login/painel.
+    if (needsExistenceCheck && tenantExistsQuery.data !== true) return;
     // Sem cookie válido, /auth/me responde 401 → manda para o login.
     if (meQuery.isError && meQuery.error instanceof ApiError && meQuery.error.status === 401) {
       router.replace("/login");
       return;
     }
     if (me && me.tenant.slug !== slug) router.replace(`/${me.tenant.slug}`);
-  }, [me, meQuery.isError, meQuery.error, slug, router]);
+  }, [me, meQuery.isError, meQuery.error, slug, router, needsExistenceCheck, tenantExistsQuery.data]);
 
   const reloadServices = useCallback(
     () => queryClient.invalidateQueries({ queryKey: ["services"] }),
@@ -106,6 +128,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     () => queryClient.invalidateQueries({ queryKey: ["overrides"] }),
     [queryClient],
   );
+
+  // Slug não corresponde a nenhum tenant real → 404 (em vez de login/redirect ao próprio painel).
+  if (tenantMissing) {
+    notFound();
+  }
 
   if (!me || me.tenant.slug !== slug) {
     return (

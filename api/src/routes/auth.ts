@@ -42,14 +42,16 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         httpOnly: true,
         secure: config.cookieSecure,
         sameSite: config.cookieSameSite,
+        ...(config.cookieDomain ? { domain: config.cookieDomain } : {}),
         path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
+        maxAge: 60 * 60 * 24 * 2, // 2 days (casa com JWT_EXPIRES_IN)
       });
 
+      // Sessão entregue só pelo cookie httpOnly (o token NÃO vai no corpo — evita que XSS leia
+      // a resposta). O JWT segue assinado e usado no Set-Cookie acima.
       return reply.status(201).send({
         user: result.user,
         tenant: result.tenant,
-        token,
       });
     }
   );
@@ -84,13 +86,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         httpOnly: true,
         secure: config.cookieSecure,
         sameSite: config.cookieSameSite,
+        ...(config.cookieDomain ? { domain: config.cookieDomain } : {}),
         path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
+        maxAge: 60 * 60 * 24 * 2, // 2 days (casa com JWT_EXPIRES_IN)
       });
 
+      // Sessão entregue só pelo cookie httpOnly (o token NÃO vai no corpo).
       return reply.send({
         user: result.user,
-        token,
       });
     }
   );
@@ -106,6 +109,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     },
     async (_req, reply) => {
       reply.clearCookie("token", {
+        ...(config.cookieDomain ? { domain: config.cookieDomain } : {}),
         path: "/",
       });
 

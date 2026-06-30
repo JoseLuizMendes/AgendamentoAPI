@@ -36,7 +36,7 @@ describe.skipIf(!hasDb)("integration/settings", () => {
         tenantSlug: "clinica",
       },
     });
-    ownerToken = signup.json().token;
+    ownerToken = signup.cookies.find((c) => c.name === "token")?.value ?? "";
 
     await app.inject({
       method: "POST",
@@ -49,7 +49,7 @@ describe.skipIf(!hasDb)("integration/settings", () => {
       url: "/auth/login",
       payload: { email: "staff@example.com", password: "password123", tenantSlug: "clinica" },
     });
-    staffToken = login.json().token;
+    staffToken = login.cookies.find((c) => c.name === "token")?.value ?? "";
   });
 
   it("GET /settings retorna defaults", async () => {

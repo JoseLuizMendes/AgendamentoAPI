@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 
 /**
@@ -8,17 +10,22 @@ import "./globals.css";
  * provider/tema (eles podem ter sido o que falhou): só tokens e recarregar a página.
  */
 export default function GlobalError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
   return (
     <html lang="pt-BR">
       <body className="font-sans antialiased">
         <div
           style={{
-            minHeight: "100vh",
+            minHeight: "100dvh",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",

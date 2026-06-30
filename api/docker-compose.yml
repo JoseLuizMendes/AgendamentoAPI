@@ -4,16 +4,15 @@
 # Uso na VPS:
 #   docker compose pull && docker compose up -d
 #
-# Variáveis lidas do arquivo .env (ver .env.example): API_IMAGE, DOMAIN, DATABASE_URL,
-# DIRECT_DATABASE_URL, JWT_SECRET, CORS_ORIGIN, etc.
+# Variáveis lidas do arquivo .env (ver .env.example): API_IMAGE, WEB_IMAGE, API_DOMAIN,
+# WEB_DOMAIN, DATABASE_URL, DIRECT_DATABASE_URL, JWT_SECRET, CORS_ORIGIN, etc.
+# NOTA: NEXT_PUBLIC_API_URL do Web é build-time (assado na imagem pelo CI), não runtime.
 
 services:
   api:
     image: ${API_IMAGE:-ghcr.io/CHANGE_ME/agendamento-api:latest}
     restart: unless-stopped
     env_file: .env
-    depends_on:
-      - redis
     healthcheck:
       test:
         - CMD
@@ -27,28 +26,42 @@ services:
     expose:
       - "3000"
 
-  redis:
-    image: redis:7-alpine
+  web:
+    image: ${WEB_IMAGE:-ghcr.io/CHANGE_ME/agendamento-web:latest}
     restart: unless-stopped
-    volumes:
-      - redisdata:/data
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    expose:
+      - "3000"
+
+  # NOTA: Redis foi removido (não era usado pelo código). Reintroduzir só quando houver
+  # fila/jobs em background, escala horizontal (rate-limit distribuído) ou denylist de JWT.
 
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
       - api
+      - web
     ports:
       - "80:80"
       - "443:443"
     environment:
-      DOMAIN: ${DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      WEB_DOMAIN: ${WEB_DOMAIN}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
 
 volumes:
-  redisdata:
   caddy_data:
   caddy_config:

@@ -173,12 +173,16 @@ são apenas os **não-fetch** (`setMounted`, `theme-toggle`, `hero`) — qualque
   fábrica). Escopo: o gráfico combinado "Movimento financeiro" (receita + agendamentos, eixo duplo).
   **Recharts segue como padrão** nos demais gráficos; imports modulares (`echarts/core` + `use`),
   cores via tokens lidos do CSS (`getComputedStyle`), tema re-aplicado no toggle claro/escuro.
+- **Observabilidade: Sentry (`@sentry/node` + `@sentry/nextjs`)** — 2026-06-29 (spec 005). Erros +
+  tracing de produção via SaaS (em vez de auto-hospedar Grafana/Loki/Prometheus na VPS única). O SDK
+  Node v8+ é **OTel-based** (instrumentação portável → troca de backend possível sem reinstrumentar).
+  Gateado por DSN (sem credencial = no-op; dev não envia). Scrub de dados sensíveis via `beforeSend`.
 - _(novas exceções entram aqui, com data e justificativa, via C6)_
 
 <!-- SPECKIT START -->
-Feature ativa: **Segurança & Hardening** — `specs/003-seguranca-hardening/` ([spec](specs/003-seguranca-hardening/spec.md) + [plan](specs/003-seguranca-hardening/plan.md)). Fases 1a–2 **implementadas e verdes**:
-anti-brute-force (timing fix + lockout), hardening (bodyLimit/idempotency/`pnpm audit`) e ciclo de
-conta por email (verificação + reset via Resend). Features anteriores prontas:
-`specs/001-observabilidade-frontend` (implementada) e `specs/002-dashboard-redesign`. Princípios:
+Feature ativa: **Prod-Readiness & Hardening Final** — `specs/004-prod-readiness/` ([spec](specs/004-prod-readiness/spec.md) + [plan](specs/004-prod-readiness/plan.md) + [tasks](specs/004-prod-readiness/tasks.md)). **✅ Implementada US1–US5** (verificação local verde; integração/Docker validam no CI/VPS): CVEs zerados (fast-jwt/fastify/next; 0 crítico runtime), app inteiro na VPS (web dockerizado standalone + Caddy 2 domínios + web no CI/deploy), sessão/navegador endurecidos (token fora do body, JWT 2d, COOKIE_DOMAIN, Swagger fora de prod, headers, gate `proxy.ts`, CSP estrita em prod), higiene de repo/infra (node_modules/lockfiles removidos, Redis removido, audit bloqueante, backup/rollback doc), limpeza de tokens + dvh.
+Feature **✅ Implementada**: **005-observabilidade** — `specs/005-observabilidade/` ([spec](specs/005-observabilidade/spec.md) + [plan](specs/005-observabilidade/plan.md) + [tasks](specs/005-observabilidade/tasks.md)). Sentry (SaaS, `@sentry/node` OTel-based + `@sentry/nextjs` 10.62.0) p/ erros + tracing: `instrument.ts` (API, `--import` em prod) + `instrumentation*.ts` (Web) + `setupFastifyErrorHandler` + Error Boundaries; **scrub** (`beforeSend` + `sendDefaultPii:false`) removendo cookie/Authorization/senha; **gate por DSN** (sem DSN = no-op; dev não envia); `tracesSampleRate` por env; release=SHA; logs seguem no pino; uptime externo doc no DEPLOY.md §7. **Exceção de stack** `@sentry/*` registrada. Verificação local verde; captura real valida no painel. **Stack:** Sentry entra no canon de observabilidade.
+Features prontas: `specs/001-observabilidade-frontend`, `specs/002-dashboard-redesign`, e
+`specs/003-seguranca-hardening` (**✅ concluída**: anti-brute-force, hardening, email verify/reset). Princípios:
 `.specify/memory/constitution.md`; contexto/mapa: `.specify/memory/project-context.md`.
 <!-- SPECKIT END -->

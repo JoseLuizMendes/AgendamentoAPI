@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import cors from "@fastify/cors";
+import * as Sentry from "@sentry/node";
 import { config } from "./config.js";
 import prismaPlugin from "./plugins/prisma.js";
 import swaggerPlugin from "./plugins/docs/swagger.js";
@@ -153,20 +154,24 @@ export async function buildApp(): Promise<FastifyInstance> {
       .send({ message: `Route ${req.method}:${path} not found`, error: "Not Found", statusCode: 404 });
   });
 
-  await app.register(helmet, {
-    contentSecurityPolicy: {
-      directives: {
+  // CSP: estrita em produção (API serve só JSON — o Swagger UI não roda em prod). Fora de produção,
+  // libera o necessário para o Swagger UI (CDNs + inline). Endurecimento da auditoria (US5).
+  const cspDirectives = config.isProduction
+    ? {
         defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://unpkg.com",
-          "https://cdn.jsdelivr.net",
-        ],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      }
+    : {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
         imgSrc: ["'self'", "data:", "https:"],
-      },
-    },
+      };
+
+  await app.register(helmet, {
+    contentSecurityPolicy: { directives: cspDirectives },
   });
 
   await app.register(cors, {
@@ -176,6 +181,9 @@ export async function buildApp(): Promise<FastifyInstance> {
         .map((s) => s.trim())
         .filter(Boolean);
 
+      // Sem header Origin (curl, health checks, server-to-server, apps nativos) → permitido.
+      // Não é vetor de CSRF: requisições de navegador cross-site sempre enviam Origin, e a
+      // proteção de sessão é o cookie SameSite. Decisão registrada (auditoria US5).
       if (!origin) {
         cb(null, true);
         return;
@@ -201,7 +209,16 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
-  await app.register(swaggerPlugin);
+  // Documentação interativa (Swagger UI em /docs) só FORA de produção — não expõe a superfície
+  // completa da API em prod. Em produção, mantém apenas um GET / mínimo para discovery/probe.
+  if (!config.isProduction) {
+    await app.register(swaggerPlugin);
+  } else {
+    app.get("/", { schema: { hide: true } }, (_req, reply) =>
+      reply.send({ name: "Agendamento API", status: "ok" })
+    );
+  }
+
   await app.register(prismaPlugin);
   await app.register(authPlugin);
 
@@ -216,6 +233,12 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(reportsRoutes);
   await app.register(uploadsRoutes);
   await app.register(publicRoutes);
+
+  // Captura de erros no Sentry (onError) — só quando habilitado por DSN. Coexiste com o
+  // setErrorHandler acima (este formata a resposta; o Sentry apenas registra o evento).
+  if (config.sentry) {
+    Sentry.setupFastifyErrorHandler(app);
+  }
 
   return app;
 }

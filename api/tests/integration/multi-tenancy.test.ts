@@ -55,7 +55,7 @@ describe.skipIf(!hasDb)("integration/multi-tenancy", () => {
       const resultA = signupA.json();
       expect(resultA.user.role).toBe("OWNER");
       expect(resultA.tenant.slug).toBe("tenant-a");
-      tenantAToken = resultA.token;
+      tenantAToken = signupA.cookies.find((c) => c.name === "token")?.value ?? "";
       tenantAUserId = resultA.user.id;
       tenantATenantId = resultA.user.tenantId;
 
@@ -76,7 +76,7 @@ describe.skipIf(!hasDb)("integration/multi-tenancy", () => {
       const resultB = signupB.json();
       expect(resultB.user.role).toBe("OWNER");
       expect(resultB.tenant.slug).toBe("tenant-b");
-      tenantBToken = resultB.token;
+      tenantBToken = signupB.cookies.find((c) => c.name === "token")?.value ?? "";
       tenantBUserId = resultB.user.id;
       tenantBTenantId = resultB.user.tenantId;
 
@@ -399,7 +399,7 @@ describe.skipIf(!hasDb)("integration/multi-tenancy", () => {
       },
     });
     const resultA = signupA.json();
-    tenantAToken = resultA.token;
+    tenantAToken = signupA.cookies.find((c) => c.name === "token")?.value ?? "";
     tenantAUserId = resultA.user.id;
     tenantATenantId = resultA.user.tenantId;
 
@@ -416,7 +416,7 @@ describe.skipIf(!hasDb)("integration/multi-tenancy", () => {
       },
     });
     const resultB = signupB.json();
-    tenantBToken = resultB.token;
+    tenantBToken = signupB.cookies.find((c) => c.name === "token")?.value ?? "";
     tenantBUserId = resultB.user.id;
     tenantBTenantId = resultB.user.tenantId;
   }

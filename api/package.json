@@ -8,7 +8,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc -p tsconfig.json",
     "postinstall": "prisma generate",
-    "start": "node dist/server.js",
+    "start": "node --import ./dist/instrument.js dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
@@ -24,7 +24,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
-    "db:setup": "pnpm db:generate && pnpm db:push"
+    "db:setup": "pnpm db:generate && pnpm db:push",
+    "cleanup:tokens": "tsx src/scripts/cleanup-tokens.ts"
   },
   "keywords": [],
   "author": "",
@@ -35,15 +36,16 @@
     "@fastify/cors": "^11.1.0",
     "@fastify/env": "^5.0.3",
     "@fastify/helmet": "^13.0.0",
-    "@fastify/jwt": "^10.0.0",
+    "@fastify/jwt": "10.1.0",
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/swagger": "^9.6.1",
     "@fastify/swagger-ui": "^5.2.4",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
+    "@sentry/node": "^10.62.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
-    "fastify": "^5.6.2",
+    "fastify": "5.9.0",
     "fastify-plugin": "^5.1.0",
     "fastify-type-provider-zod": "^6.1.0",
     "luxon": "^3.7.2",
@@ -54,10 +56,21 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/luxon": "^3.7.1",
     "@types/node": "^25.0.8",
-    "@vitest/coverage-v8": "^4.0.17",
+    "@vitest/coverage-v8": "^4.1.9",
     "prisma": "^7.2.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.17"
+    "vitest": "^4.1.9"
+  },
+  "pnpm": {
+    "overrides": {
+      "fast-uri": "^3.1.2",
+      "ajv": ">=8.18.0",
+      "@fastify/static": ">=9.1.1",
+      "lodash": ">=4.18.0",
+      "defu": ">=6.1.5",
+      "bn.js": ">=4.12.3",
+      "postcss": ">=8.5.10"
+    }
   }
 }

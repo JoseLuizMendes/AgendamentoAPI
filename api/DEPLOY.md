@@ -58,10 +58,18 @@ Gerar um JWT_SECRET forte:
 openssl rand -base64 48
 ```
 
-### 1.5 GitHub Secrets (repo → Settings → Secrets and variables → Actions)
+### 1.5 GitHub Secrets + Variables (repo → Settings → Secrets and variables → Actions)
+**Secrets:**
 - `VPS_HOST` — IP/host da VPS
 - `VPS_USER` — usuário SSH
 - `VPS_SSH_KEY` — chave privada SSH (par com a pública instalada na VPS)
+
+**Variables:**
+- `DEPLOY_ENABLED` — defina como `true` **só quando a VPS estiver pronta**. Enquanto não estiver
+  setado, o job de deploy SSH é **pulado** (o build/push das imagens no GHCR continua rodando e
+  valida os Dockerfiles). Isso evita um deploy vermelho enquanto não há VPS.
+- `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT` — usadas no build
+  da imagem do Web. (Secret opcional: `SENTRY_AUTH_TOKEN` para sourcemaps.)
 
 > A imagem é publicada no **GHCR** usando o `GITHUB_TOKEN` automático (não precisa de secret).
 > Garanta que o pacote GHCR seja acessível pela VPS (público, ou `docker login ghcr.io` na VPS).
@@ -131,3 +139,61 @@ docker compose ps                   # status/health dos serviços
 docker compose restart api          # reinicia a API
 docker compose pull && docker compose up -d   # atualiza para a última imagem
 ```
+
+---
+
+## 6. Backup & Rollback de migrations
+
+O `docker-entrypoint.sh` roda `prisma migrate deploy` antes de subir o servidor. Para uma migração
+nunca deixar o banco num estado ruim sem volta:
+
+### Antes do deploy (backup)
+- **Neon (recomendado):** crie um **branch/snapshot** da branch de produção antes do deploy. O
+  branch é instantâneo e serve como ponto de restauração:
+  - Console Neon → Branches → "Create branch" a partir de `production` (ou snapshot/Point-in-Time).
+- **Alternativa (dump):** `pg_dump "$DIRECT_DATABASE_URL" > backup-$(date +%F).sql` numa máquina com
+  acesso ao banco.
+
+### Se a migração falhar no deploy
+1. O contêiner da API **não sobe** (o entrypoint aborta no `migrate deploy` com `set -e`); o Caddy
+   segue servindo a versão anterior se ela ainda estiver no ar (`restart: unless-stopped`).
+2. Diagnóstico: `docker compose logs api` → ver o erro do `migrate deploy`.
+3. **Migração parcial/`failed`:** marcar como revertida e restaurar:
+   ```bash
+   # Dentro do container/host com o CLI do Prisma e DIRECT_DATABASE_URL:
+   npx prisma migrate resolve --rolled-back <nome_da_migration>
+   ```
+   e **restaurar o branch/snapshot Neon** criado no passo de backup (ou `psql < backup-*.sql`).
+4. Repinar a imagem na tag anterior e subir de novo:
+   ```bash
+   # No .env da VPS, fixe API_IMAGE/WEB_IMAGE na tag :sha da versão estável anterior, então:
+   docker compose pull && docker compose up -d
+   ```
+
+### Boas práticas
+- **Migrations aditivas** (colunas com default; ver `prisma/CLAUDE.md`) raramente exigem rollback.
+- Mudanças destrutivas (drop de coluna) em **duas fases**: deploy 1 para de usar a coluna; deploy 2
+  a remove — assim o rollback do deploy 2 não perde dados.
+- Imagens são tagueadas por `:sha` (ver `deploy.yml`) — sempre há uma tag estável para voltar.
+
+---
+
+## 7. Observabilidade (Sentry) & Uptime externo
+
+### Sentry (erros + tracing) — spec 005
+- **Desligado por padrão**: sem DSN, a captura é no-op (dev/local não envia nada).
+- **API** (`.env` da VPS): `SENTRY_DSN`, `SENTRY_ENVIRONMENT=production`, `SENTRY_RELEASE=<sha>`
+  (use o SHA da imagem em deploy), `SENTRY_TRACES_SAMPLE_RATE=0.1`.
+- **Web** (build-time, no CI): repo **Variables** `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`,
+  `SENTRY_PROJECT`; repo **Secret** `SENTRY_AUTH_TOKEN` (opcional — habilita upload de sourcemaps p/
+  stack trace legível; sem ele, o build segue). `NEXT_PUBLIC_APP_VERSION` já recebe o `github.sha`.
+- Os eventos passam por **scrub** (`beforeSend`) + `sendDefaultPii:false` — cookie/Authorization/senha
+  nunca saem. Falha de envio é best-effort (não derruba a app).
+
+### Uptime externo (rede de segurança quando a VPS inteira cai)
+A captura interna do Sentry não reporta "o host inteiro caiu". Configure um monitor **externo**
+gratuito (ex.: **UptimeRobot**, **Better Stack**) com checagem HTTP a cada 1–5 min:
+- `https://api.<dominio>/health/live` → espera `200 {"status":"ok"}`.
+- `https://app.<dominio>/` → espera `200`.
+- Notificação por email/Telegram/Slack quando cair. Os health checks distinguem "host no ar mas app
+  degradada" (5xx/timeout no `/health/live`) de "tudo fora" (sem resposta).

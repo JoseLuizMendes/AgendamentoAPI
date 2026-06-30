@@ -35,7 +35,7 @@ describe.skipIf(!hasDb)("integration/appointments", () => {
         tenantSlug: "clinica",
       },
     });
-    token = signup.json().token;
+    token = signup.cookies.find((c) => c.name === "token")?.value ?? "";
   });
 
   async function createService(name: string, durationInMinutes: number): Promise<number> {

@@ -27,27 +27,61 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Metadata (tags/labels)
-        id: meta
+      # ----- API -----
+      - name: Metadata API (tags/labels)
+        id: meta_api
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ github.repository }}-api
           tags: |
             type=raw,value=latest
             type=sha
 
-      - name: Build e push
+      - name: Build e push (API)
         uses: docker/build-push-action@v6
         with:
           context: api
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta_api.outputs.tags }}
+          labels: ${{ steps.meta_api.outputs.labels }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      # ----- Web -----
+      - name: Metadata Web (tags/labels)
+        id: meta_web
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-web
+          tags: |
+            type=raw,value=latest
+            type=sha
+
+      - name: Build e push (Web)
+        uses: docker/build-push-action@v6
+        with:
+          context: web
+          push: true
+          tags: ${{ steps.meta_web.outputs.tags }}
+          labels: ${{ steps.meta_web.outputs.labels }}
+          # NEXT_PUBLIC_* é inlined no build — domínio público da API + Sentry via repo vars/secrets.
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+            NEXT_PUBLIC_APP_VERSION=${{ github.sha }}
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
 
   deploy:
     needs: build-and-push
+    # Só faz o deploy SSH na VPS quando habilitado. Defina a repo Variable DEPLOY_ENABLED=true
+    # (Settings → Secrets and variables → Actions → Variables) + os secrets VPS_HOST/VPS_USER/
+    # VPS_SSH_KEY quando a VPS estiver pronta. Sem isso, este job é PULADO (build/push das imagens
+    # segue rodando — valida os Dockerfiles e publica no GHCR).
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Deploy na VPS via SSH

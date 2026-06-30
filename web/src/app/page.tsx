@@ -9,7 +9,7 @@ import { Footer } from "@/components/landing/footer";
 
 export default function Home() {
   return (
-    <main className="noise-overlay relative min-h-screen overflow-x-hidden">
+    <main className="noise-overlay relative min-h-dvh overflow-x-hidden">
       <LandingNav />
       <Hero />
       <Features />

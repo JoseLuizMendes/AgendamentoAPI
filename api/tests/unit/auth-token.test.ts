@@ -14,7 +14,7 @@ describe("auth token expiry", () => {
     await app.close();
   });
 
-  it("emite token com exp ~7 dias após iat", async () => {
+  it("emite token com exp ~2 dias após iat", async () => {
     await app.register(authPlugin);
     await app.ready();
 
@@ -23,7 +23,7 @@ describe("auth token expiry", () => {
 
     expect(decoded?.exp).toBeTypeOf("number");
     expect(decoded?.iat).toBeTypeOf("number");
-    // 7 dias em segundos (default JWT_EXPIRES_IN)
-    expect((decoded as { exp: number }).exp - (decoded as { iat: number }).iat).toBe(60 * 60 * 24 * 7);
+    // 2 dias em segundos (default JWT_EXPIRES_IN — sessão curta, hardening US3)
+    expect((decoded as { exp: number }).exp - (decoded as { iat: number }).iat).toBe(60 * 60 * 24 * 2);
   });
 });
