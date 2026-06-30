@@ -20,6 +20,11 @@ const PUBLIC_PATHS = [
 export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Proxy reverso da API (rewrite /be/* → API externa, ver next.config.ts): o gate NÃO se aplica.
+  // A própria API autentica essas chamadas; se o middleware barrasse aqui (roda ANTES do rewrite),
+  // o login quebraria com 307 → /login. Liberar para o rewrite seguir.
+  if (pathname === "/be" || pathname.startsWith("/be/")) return NextResponse.next();
+
   // Raiz (landing) e rotas públicas conhecidas: liberar.
   const isPublic =
     pathname === "/" || PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
