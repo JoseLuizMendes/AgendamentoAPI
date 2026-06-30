@@ -31,6 +31,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
+  // Proxy reverso opcional para a API externa (ex.: API no Render, web no Vercel). Com isto o
+  // navegador só fala com o domínio do web → o cookie de sessão fica **first-party** (funciona em
+  // Safari/iPhone, sem bloqueio de cookie de terceiros e sem precisar de domínio próprio pago).
+  // Habilita setando API_PROXY_TARGET (ex.: https://agendamento-api.onrender.com) no host do web e
+  // apontando NEXT_PUBLIC_API_URL para "/be". Sem a env, não há proxy (dev local chama a API direto).
+  async rewrites() {
+    const target = process.env.API_PROXY_TARGET;
+    if (!target) return [];
+    return [{ source: "/be/:path*", destination: `${target.replace(/\/$/, "")}/:path*` }];
+  },
 };
 
 // Envolve o config com o Sentry (injeta a instrumentação; upload de sourcemaps só com
