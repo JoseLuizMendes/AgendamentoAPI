@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Activity, CalendarDays, Download, DollarSign, Receipt, UserX, Users } from "lucide-react";
+import { Activity, CalendarDays, ChevronDown, Download, DollarSign, ListFilter, Receipt, UserX, Users } from "lucide-react";
 
 import { apiRequest, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,13 @@ import { Eyebrow } from "@/components/brand/eyebrow";
 import { EmptyState, formatBRL } from "@/components/tenant/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KpiCard } from "@/components/tenant/dashboard/kpi-card";
 import { FinanceChart } from "@/components/tenant/dashboard/finance-chart";
@@ -63,7 +70,26 @@ export default function DashboardPage() {
           <h1 className="font-display text-3xl tracking-wide lg:text-4xl">Performance</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="bg-muted/60 inline-flex flex-wrap gap-1 rounded-full border p-1">
+          {/* Mobile: as 5 pílulas não cabem — filtro vira botão compacto + menu. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="sm:hidden">
+                <ListFilter className="size-4" />
+                {PERIODS.find((per) => per.key === periodKey)?.label}
+                <ChevronDown className="size-3.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup value={periodKey} onValueChange={(v) => setPeriodKey(v as PeriodKey)}>
+                {PERIODS.map((per) => (
+                  <DropdownMenuRadioItem key={per.key} value={per.key}>
+                    {per.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <div className="bg-muted/60 hidden gap-1 rounded-full border p-1 sm:inline-flex">
             {PERIODS.map((per) => (
               <button
                 key={per.key}

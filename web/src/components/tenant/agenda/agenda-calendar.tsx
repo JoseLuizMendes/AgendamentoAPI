@@ -16,19 +16,22 @@ import type {
   EventDropArg,
   EventInput,
 } from "@fullcalendar/core";
-import type { EventResizeDoneArg } from "@fullcalendar/interaction";
+import type { DateClickArg, EventResizeDoneArg } from "@fullcalendar/interaction";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { apiRequest, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useMounted } from "@/lib/use-mounted";
 import { useIsMobile } from "@/lib/use-media-query";
+import { Button } from "@/components/ui/button";
 import { useTenant } from "@/components/tenant/tenant-context";
 import { STATUS_META } from "@/components/tenant/shared";
 import type { Appointment, Service } from "@/components/tenant/types";
 import { serviceColor, statusColor, type ColorMode } from "./colors";
 import { computeLockedBands, isAvailable, type Interval } from "./availability";
 import { calendarLayout } from "./layout";
+import { tapRange } from "./tap";
 import { phaseOf, PHASE_CLASS } from "./phase";
 import { AppointmentCreateDrawer } from "./appointment-create-drawer";
 import { AppointmentDetailDrawer } from "./appointment-detail-drawer";
@@ -217,6 +220,19 @@ export function AgendaCalendar() {
     arg.view.calendar.unselect();
   }
 
+  // Toque simples na grade (mobile): o `select` do FullCalendar exige long-press +
+  // arrasto no touch — o tap dispara só `dateClick`. Abre o drawer no slot tocado.
+  function onDateClick(arg: DateClickArg) {
+    if (!isMobile || !arg.view.type.startsWith("timeGrid")) return;
+    const { start, end } = tapRange(arg.date);
+    if (!isAvailable(start, end, hours, overrides, new Date(now), slotMinTime, slotMaxTime)) {
+      toast.error("Horário indisponível");
+      return;
+    }
+    setCreateSel({ start, end });
+    setCreateOpen(true);
+  }
+
   function onEventClick(arg: EventClickArg) {
     setDetail(arg.event.extendedProps.appt as Appointment);
     setDetailOpen(true);
@@ -288,6 +304,10 @@ export function AgendaCalendar() {
           <ColorLegend mode={colorMode} services={services} />
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {/* No mobile o "novo" sai da toolbar do FullCalendar (overflow) — vira botão aqui. */}
+          <Button size="sm" className="rounded-full lg:hidden" onClick={openCreateDefault}>
+            <Plus className="size-4" /> Novo
+          </Button>
           <TriagePanel onResolved={reload} />
           <div className="hidden lg:block">
             <ColorModeToggle mode={colorMode} onChange={changeColorMode} />
@@ -341,6 +361,7 @@ export function AgendaCalendar() {
           events={events}
           datesSet={onDatesSet}
           select={onSelect}
+          dateClick={onDateClick}
           eventClick={onEventClick}
           eventDrop={onEventDrop}
           eventResize={onEventResize}

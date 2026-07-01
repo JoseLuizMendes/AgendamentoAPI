@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
+import { Minus, Plus } from "lucide-react";
 
 import * as echarts from "echarts/core";
 import { BarChart, LineChart } from "echarts/charts";
@@ -14,6 +15,10 @@ import type {
   GridComponentOption,
   TooltipComponentOption,
 } from "echarts/components";
+
+import { useIsMobile } from "@/lib/use-media-query";
+import { Button } from "@/components/ui/button";
+import { zoomStep } from "./zoom";
 
 echarts.use([BarChart, LineChart, DataZoomComponent, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -42,6 +47,16 @@ export function FinanceChart({ data, height = 260 }: { data: Point[]; height?: n
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof echarts.init> | null>(null);
   const { resolvedTheme } = useTheme();
+  const isMobile = useIsMobile();
+
+  // Botões +/−: lêem a janela atual do dataZoom e aplicam o próximo passo (zoom.ts).
+  function stepZoom(dir: "in" | "out") {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const dz = (chart.getOption() as { dataZoom?: { start?: number; end?: number }[] }).dataZoom?.[0];
+    const next = zoomStep(dz?.start ?? 0, dz?.end ?? 100, dir);
+    chart.dispatchAction({ type: "dataZoom", start: next.start, end: next.end });
+  }
 
   // init + resize + dispose (uma vez)
   useEffect(() => {
@@ -90,10 +105,20 @@ export function FinanceChart({ data, height = 260 }: { data: Point[]; height?: n
           return `<div style="font-weight:600;margin-bottom:2px">${label}</div>${lines}`;
         },
       },
-      // Zoom por scroll do mouse (PC) e pinça (mobile), sem barra. O pan de 1 dedo fica desligado
-      // (`moveOnMouseMove:false`) e o container usa `touch-action: pan-y` → no celular, 1 dedo rola a
-      // página e 2 dedos (pinça) dão zoom no gráfico, sem sequestrar o scroll.
-      dataZoom: [{ type: "inside", zoomOnMouseWheel: true, moveOnMouseMove: false, moveOnMouseWheel: false }],
+      // Zoom por scroll do mouse (PC), pinça e botões +/− (mobile), sem barra. No celular o pan de
+      // 1 dedo fica LIGADO (`moveOnMouseMove:true`): com o `touch-action: pan-y` do container, o
+      // arrasto horizontal move o gráfico e o vertical segue rolando a página. `minValueSpan`
+      // impede a pinça de estreitar a janela até o gráfico "quebrar". No PC o arrasto continua
+      // desligado (só wheel + botões).
+      dataZoom: [
+        {
+          type: "inside",
+          zoomOnMouseWheel: true,
+          moveOnMouseMove: isMobile,
+          moveOnMouseWheel: false,
+          minValueSpan: 3,
+        },
+      ],
       xAxis: {
         type: "category",
         data: data.map((d) => d.label),
@@ -140,9 +165,21 @@ export function FinanceChart({ data, height = 260 }: { data: Point[]; height?: n
       ],
     };
     chart.setOption(option, true);
-  }, [data, resolvedTheme]);
+  }, [data, resolvedTheme, isMobile]);
 
   // `touch-action: pan-y` libera a rolagem vertical da página (1 dedo) sobre o gráfico; a pinça
-  // (2 dedos) continua dando zoom no ECharts.
-  return <div ref={ref} className="text-foreground w-full" style={{ height, touchAction: "pan-y" }} />;
+  // (2 dedos) e o arrasto horizontal ficam com o ECharts.
+  return (
+    <div className="relative">
+      <div className="absolute -top-1 right-0 z-10 flex gap-1">
+        <Button variant="outline" size="icon-xs" aria-label="Afastar zoom" onClick={() => stepZoom("out")}>
+          <Minus className="size-3.5" />
+        </Button>
+        <Button variant="outline" size="icon-xs" aria-label="Aproximar zoom" onClick={() => stepZoom("in")}>
+          <Plus className="size-3.5" />
+        </Button>
+      </div>
+      <div ref={ref} className="text-foreground w-full" style={{ height, touchAction: "pan-y" }} />
+    </div>
+  );
 }

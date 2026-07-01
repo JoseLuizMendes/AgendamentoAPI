@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { CalendarClock, CalendarDays, Clock, LayoutDashboard, LogOut, Menu, Plus, Tag, Users } from "lucide-react";
+import { CalendarClock, CalendarDays, Clock, LayoutDashboard, LogOut, Menu, Tag, Users } from "lucide-react";
 
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -124,15 +124,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <h1 className="font-display truncate text-xl tracking-wide">{title}</h1>
 
-          <div className="ml-auto flex items-center gap-2">
-            <Button asChild size="sm" className="rounded-full">
-              <Link href={`/${slug}/agenda`}>
-                <Plus className="size-4" /> <span className="hidden sm:inline">Novo agendamento</span>
-              </Link>
-            </Button>
-            <div className="lg:hidden">
-              <ThemeToggle />
-            </div>
+          <div className="ml-auto flex items-center gap-2 lg:hidden">
+            <ThemeToggle />
           </div>
         </header>
 
