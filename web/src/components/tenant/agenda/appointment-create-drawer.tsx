@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { NativeSelect } from "@/components/ui/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { durationLabel, localInputToISO, toLocalInputValue } from "./datetime";
 import { DateTimePicker } from "./datetime-picker";
@@ -127,17 +127,18 @@ function CreateContent({
         </div>
         <div className="space-y-2">
           <Label htmlFor="c-svc">Serviço</Label>
-          <NativeSelect id="c-svc" className="h-11" value={serviceId} onChange={(e) => setServiceId(Number(e.target.value))} disabled={services.length === 0}>
-            {services.length === 0 ? (
-              <option value={0}>Cadastre um serviço primeiro</option>
-            ) : (
-              services.map((s) => (
-                <option key={s.id} value={s.id}>
+          <Select value={String(serviceId)} onValueChange={(v) => setServiceId(Number(v))} disabled={services.length === 0}>
+            <SelectTrigger id="c-svc" className="h-11 w-full">
+              <SelectValue placeholder="Cadastre um serviço primeiro" />
+            </SelectTrigger>
+            <SelectContent>
+              {services.map((s) => (
+                <SelectItem key={s.id} value={String(s.id)}>
                   {s.name} — {formatBRL(s.priceInCents)} · {s.durationInMinutes}min
-                </option>
-              ))
-            )}
-          </NativeSelect>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-2">

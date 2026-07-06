@@ -38,7 +38,7 @@ agenda (FullCalendar), dashboard (Recharts), clientes, e helpers compartilhados.
 |---|---|---|
 | Agenda | FullCalendar 6 (timegrid/daygrid/interaction) | Cores por token; pt-br. |
 | Gráficos | Recharts | `currentColor` + tokens. |
-| Drawers/UI | shadcn `Sheet`/`Button`/`Input`/`NativeSelect` | — |
+| Drawers/UI | shadcn `Sheet`/`Button`/`Input`/`Select` | — |
 | Estado servidor | @tanstack/react-query | Via `useTenant` + queries locais. |
 
 ## Testes
