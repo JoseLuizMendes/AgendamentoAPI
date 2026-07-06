@@ -27,7 +27,7 @@ Lógica pura em `clients.ts` + `.test.ts`.
   (7 destaques: gasto/ticket/visitas/novo/recente/inativo/faltas), `newClientsByMonth`.
 - **Sem `useEffect` de fetch.** O único efeito da página é navegação/toast no erro (401 → login).
 - **Reuso:** `paginate` (`@/lib/paginate`), `StatRow`/`EmptyState`/`formatBRL` (`../shared`),
-  `CountBars` (`../dashboard/charts`), `Bento`/`Card*`/`Table`/`Input`/`NativeSelect`/`Skeleton`
+  `CountBars` (`../dashboard/charts`), `Bento`/`Card*`/`Table`/`Input`/`Select`/`Skeleton`
   (`@/components/ui/*`). **Só tokens; sem hex.**
 - Paginação da tabela: `PAGE_SIZE = 8`; busca/ordenação resetam a página.
 

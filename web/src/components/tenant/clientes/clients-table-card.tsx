@@ -8,7 +8,7 @@ import { EmptyState, formatBRL } from "@/components/tenant/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/ui/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { filterClients, formatShortDate, sortClients, type Client, type ClientSortKey } from "./clients";
@@ -52,20 +52,23 @@ export function ClientsTableCard({
               }}
             />
           </div>
-          <NativeSelect
-            className="w-44"
-            aria-label="Ordenar clientes"
+          <Select
             value={sort}
-            onChange={(e) => {
-              setSort(e.target.value as ClientSortKey);
+            onValueChange={(v) => {
+              setSort(v as ClientSortKey);
               setPage(1);
             }}
           >
-            <option value="recent">Mais recentes</option>
-            <option value="visits">Mais visitas</option>
-            <option value="total">Maior gasto</option>
-            <option value="name">Nome (A-Z)</option>
-          </NativeSelect>
+            <SelectTrigger className="w-44" aria-label="Ordenar clientes">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Mais recentes</SelectItem>
+              <SelectItem value="visits">Mais visitas</SelectItem>
+              <SelectItem value="total">Maior gasto</SelectItem>
+              <SelectItem value="name">Nome (A-Z)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (

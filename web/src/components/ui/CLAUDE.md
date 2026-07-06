@@ -10,7 +10,7 @@ escopo: "Primitivos shadcn/ui (New York)"
 ## Escopo
 
 Componentes shadcn/ui gerados (button, input, label, sheet, popover, calendar, table, card,
-dropdown-menu, tabs, sonner, skeleton, separator, alert, avatar, badge, `native-select`).
+dropdown-menu, tabs, sonner, skeleton, separator, alert, avatar, badge, `select`).
 
 ## Diretrizes
 
@@ -23,7 +23,9 @@ dropdown-menu, tabs, sonner, skeleton, separator, alert, avatar, badge, `native-
 - **UI = Radix puro** (`@radix-ui/react-*` antigos ou o meta-pacote `radix-ui`). Base UI foi
   removido (combobox sem uso) — exceção revertida na raiz (2026-06-15).
 - **Não colocar regra de negócio aqui.** São primitivos de apresentação reutilizáveis.
-- `native-select` é custom do projeto (não-shadcn) — mantê-lo.
+- `select` (shadcn, Radix via meta-pacote `radix-ui`) é o dropdown padrão — visual na identidade
+  do projeto (popup `bg-popover`, tokens). Substituiu o antigo `native-select` (removido em
+  2026-07-06, cujo popup nativo não seguia o tema).
 
 ## Referências
 - `../CLAUDE.md` (components) · `components.json` (raiz do web) · raiz
