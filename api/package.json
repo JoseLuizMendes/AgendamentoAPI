@@ -25,7 +25,8 @@
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
     "db:setup": "pnpm db:generate && pnpm db:push",
-    "cleanup:tokens": "tsx src/scripts/cleanup-tokens.ts"
+    "cleanup:tokens": "tsx src/scripts/cleanup-tokens.ts",
+    "backfill:patients": "tsx src/scripts/backfill-patients.ts"
   },
   "keywords": [],
   "author": "",
