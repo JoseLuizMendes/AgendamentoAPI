@@ -147,6 +147,7 @@ model Appointment {
   user          User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   patientId     Int?
   patient       Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  teeth         AppointmentTooth[]
   tenantId      Int
   tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   startTime     DateTime
@@ -161,6 +162,40 @@ model Appointment {
   @@index([tenantId, userId])
   @@index([tenantId, patientId])
   @@index([serviceId])
+}
+
+/// Procedimento odontológico registrado por dente (vocabulário fixo do MVP).
+/// Aditivo: novo procedimento = +1 valor + migration. OUTRO + nota cobre casos fora da lista.
+enum DentalProcedure {
+  AVALIACAO
+  PROFILAXIA
+  RESTAURACAO
+  ENDODONTIA
+  EXTRACAO
+  COROA
+  PROTESE
+  IMPLANTE
+  CLAREAMENTO
+  RASPAGEM
+  SELANTE
+  FLUOR
+  RADIOGRAFIA
+  OUTRO
+}
+
+/// Dente tratado numa consulta (charting por consulta, notação FDI/ISO 3950). Só em tenant DENTAL.
+/// 1 registro por dente por consulta (@@unique); replace-on-edit no service. Aditivo, não polui o core.
+model AppointmentTooth {
+  id            Int             @id @default(autoincrement())
+  appointmentId Int
+  appointment   Appointment     @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  toothFdi      Int             // FDI/ISO 3950: 11-18,21-28,31-38,41-48 (perm.) · 51-85 (decíduos)
+  procedure     DentalProcedure
+  note          String?
+  createdAt     DateTime        @default(now())
+
+  @@unique([appointmentId, toothFdi])
+  @@index([appointmentId])
 }
 
 model BusinessHours {
