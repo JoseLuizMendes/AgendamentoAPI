@@ -3,6 +3,8 @@ import { NotFoundError, ConflictError, ValidationError } from "../utils/errors.j
 import { getService } from "./services.js";
 import { assertNoConflict } from "./appointment-conflict.js";
 import { assertStatusTransition } from "./appointment-status.js";
+import { upsertPatient } from "./patients.js";
+import { normalizePhone } from "../utils/phone.js";
 
 const MAX_DURATION_MS = 24 * 60 * 60_000;
 
@@ -105,6 +107,14 @@ export async function createAppointment(
     return await prisma.$transaction(
       async (tx) => {
         await assertNoConflict(tx, tenantId, data.startTime, endTime);
+        // Acha/cria o Paciente por telefone (mesma transação → sem paciente órfão se der conflito).
+        const patient = await upsertPatient(
+          tx,
+          tenantId,
+          normalizePhone(data.customerPhone),
+          data.customerName,
+          data.customerEmail ?? null,
+        );
         return tx.appointment.create({
           data: {
             customerName: data.customerName,
@@ -113,6 +123,7 @@ export async function createAppointment(
             notes: data.notes ?? null,
             serviceId: data.serviceId,
             userId: userId ?? null,
+            patientId: patient.id,
             tenantId,
             startTime: data.startTime,
             endTime,
@@ -176,6 +187,21 @@ export async function updateAppointment(
     assertStatusTransition(appointment.status, data.status);
   }
 
+  // Re-link do paciente quando telefone/nome muda (mantém patientId coerente com o snapshot).
+  const patientLink =
+    data?.customerPhone || data?.customerName
+      ? {
+          patientId: (
+            await upsertPatient(
+              prisma,
+              tenantId,
+              normalizePhone(data.customerPhone ?? appointment.customerPhone),
+              data.customerName ?? appointment.customerName,
+            )
+          ).id,
+        }
+      : {};
+
   const dataFields = {
     ...(data?.status && { status: data.status }),
     ...(data?.serviceId && { serviceId: data.serviceId }),
@@ -183,6 +209,7 @@ export async function updateAppointment(
     ...(data?.customerPhone && { customerPhone: data.customerPhone }),
     ...(data?.customerEmail !== undefined && { customerEmail: data.customerEmail }),
     ...(data?.notes !== undefined && { notes: data.notes }),
+    ...patientLink,
   };
 
   // Mudança de horário (mover/redimensionar) exige checagem de conflito atômica.
