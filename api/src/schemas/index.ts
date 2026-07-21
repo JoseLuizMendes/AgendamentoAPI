@@ -239,6 +239,7 @@ export const AppointmentResponseSchema = z.object({
   notes: z.string().nullable(),
   serviceId: z.number(),
   userId: z.number().nullable(),
+  patientId: z.number().nullable(),
   tenantId: z.number(),
   startTime: z.date(),
   endTime: z.date(),

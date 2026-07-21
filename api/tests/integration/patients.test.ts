@@ -116,4 +116,28 @@ describe.skipIf(!hasDb)("integration/patients", () => {
       expect(await app.prisma.patient.count()).toBe(2);
     });
   });
+
+  describe("exposição na API", () => {
+    it("POST /appointments retorna patientId no corpo da resposta", async () => {
+      const serviceId = await createService("Limpeza", 30);
+      const r = await app.inject({
+        method: "POST",
+        url: "/appointments",
+        headers: { authorization: `Bearer ${token}` },
+        payload: { customerName: "Ana", customerPhone: "5511900000000", serviceId, startTime: "2026-09-03T14:00:00.000Z" },
+      });
+      expect(r.statusCode).toBe(201);
+      expect(typeof r.json().patientId).toBe("number");
+    });
+
+    it("/auth/me expõe tenant.businessType (default GENERIC)", async () => {
+      const me = await app.inject({
+        method: "GET",
+        url: "/auth/me",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(me.statusCode).toBe(200);
+      expect(me.json().tenant.businessType).toBe("GENERIC");
+    });
+  });
 });
