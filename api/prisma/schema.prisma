@@ -18,10 +18,18 @@ enum Role {
   CUSTOMER
 }
 
+/// Vertical do tenant — gate de módulos opcionais (ex.: odontologia só em DENTAL).
+enum BusinessType {
+  GENERIC
+  DENTAL
+}
+
 model Tenant {
   id                     Int                     @id @default(autoincrement())
   name                   String
   slug                   String                  @unique
+  // Vertical do tenant (gate de módulos opcionais). Default preserva os tenants atuais.
+  businessType           BusinessType            @default(GENERIC)
   // Settings
   allowCustomerBooking   Boolean                 @default(false)
   timezone               String                  @default("America/Sao_Paulo")
@@ -36,8 +44,28 @@ model Tenant {
   users                  User[]
   services               Service[]
   appointments           Appointment[]
+  patients               Patient[]
   businessHours          BusinessHours[]
   businessDateOverrides  BusinessDateOverride[]
+}
+
+/// Paciente/cliente do tenant (genérico — serve qualquer nicho). Fundação do histórico.
+/// Criado/atualizado por auto-upsert em (tenantId, phone) no booking.
+model Patient {
+  id           Int           @id @default(autoincrement())
+  tenantId     Int
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String
+  phone        String        // normalizado (só dígitos)
+  email        String?
+  birthDate    DateTime?
+  notes        String?
+  appointments Appointment[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
 }
 
 model User {
@@ -117,6 +145,8 @@ model Appointment {
   service       Service           @relation(fields: [serviceId], references: [id])
   userId        Int?
   user          User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  patientId     Int?
+  patient       Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
   tenantId      Int
   tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   startTime     DateTime
@@ -129,6 +159,7 @@ model Appointment {
   @@index([tenantId, serviceId])
   @@index([tenantId, startTime, endTime])
   @@index([tenantId, userId])
+  @@index([tenantId, patientId])
   @@index([serviceId])
 }
 
