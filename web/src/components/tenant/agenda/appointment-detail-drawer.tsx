@@ -27,6 +27,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { durationLabel, localInputToISO, toLocalInputValue } from "./datetime";
 import { DateTimePicker } from "./datetime-picker";
+import { useTenant } from "@/components/tenant/tenant-context";
+import { isDental } from "@/components/tenant/dental/dental";
+import { OdontogramaPicker } from "@/components/tenant/dental/odontograma-picker";
 
 export function AppointmentDetailDrawer({
   open,
@@ -60,6 +63,7 @@ function DetailContent({
   services: Service[];
   onChanged: () => void;
 }) {
+  const { me } = useTenant();
   const [editing, setEditing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -255,6 +259,13 @@ function DetailContent({
                 ))}
               </div>
             </div>
+          ) : null}
+
+          {isDental(me) ? (
+            <section className="space-y-3 border-t pt-5">
+              <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">Odontograma</p>
+              <OdontogramaPicker appointmentId={a.id} />
+            </section>
           ) : null}
         </div>
       )}
