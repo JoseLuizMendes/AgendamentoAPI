@@ -1,4 +1,4 @@
-import type { DentalProcedure, MeResponse } from "../types";
+import type { DentalProcedure, MeResponse, Patient } from "../types";
 
 /** Vocabulário de procedimentos (espelha o enum DentalProcedure da API). */
 export const DENTAL_PROCEDURES: readonly DentalProcedure[] = [
@@ -47,4 +47,16 @@ export const PERMANENT_LOWER: readonly number[] = [
 /** Gate de vertical: a UI odontológica só aparece em tenant DENTAL. */
 export function isDental(me: MeResponse): boolean {
   return me.tenant.businessType === "DENTAL";
+}
+
+/** Só os dígitos — casa telefone formatado (aba Clientes) com o telefone normalizado do Paciente. */
+export function digitsOnly(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+/** Acha o Paciente correspondente a um telefone (possivelmente formatado). */
+export function findPatientByPhone(patients: Patient[], phone: string): Patient | undefined {
+  const target = digitsOnly(phone);
+  if (!target) return undefined;
+  return patients.find((p) => digitsOnly(p.phone) === target);
 }

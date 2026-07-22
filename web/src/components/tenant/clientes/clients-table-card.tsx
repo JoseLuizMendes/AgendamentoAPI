@@ -20,10 +20,12 @@ export function ClientsTableCard({
   clients,
   loading,
   className,
+  onSelect,
 }: {
   clients: Client[];
   loading?: boolean;
   className?: string;
+  onSelect?: (client: Client) => void;
 }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ClientSortKey>("recent");
@@ -98,7 +100,23 @@ export function ClientsTableCard({
                 </TableHeader>
                 <TableBody>
                   {items.map((c) => (
-                    <TableRow key={c.phone || c.name}>
+                    <TableRow
+                      key={c.phone || c.name}
+                      onClick={() => onSelect?.(c)}
+                      tabIndex={onSelect ? 0 : undefined}
+                      onKeyDown={(e) => {
+                        if (onSelect && (e.key === "Enter" || e.key === " ")) {
+                          e.preventDefault();
+                          onSelect(c);
+                        }
+                      }}
+                      aria-label={onSelect ? `Abrir ficha de ${c.name}` : undefined}
+                      className={
+                        onSelect
+                          ? "hover:bg-accent focus-visible:bg-accent cursor-pointer focus-visible:outline-none"
+                          : undefined
+                      }
+                    >
                       <TableCell className="truncate font-medium">{c.name}</TableCell>
                       <TableCell className="text-muted-foreground tabular-nums">{c.phone || "—"}</TableCell>
                       <TableCell className="text-muted-foreground tabular-nums">{formatShortDate(c.lastVisit)}</TableCell>

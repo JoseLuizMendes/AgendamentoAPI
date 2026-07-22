@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -8,11 +8,13 @@ import { toast } from "sonner";
 import { apiRequest, ApiError } from "@/lib/api";
 import { Bento } from "@/components/ui/bento";
 import type { Appointment } from "@/components/tenant/types";
-import { aggregateClients } from "@/components/tenant/clientes/clients";
+import { aggregateClients, type Client } from "@/components/tenant/clientes/clients";
 import { ClientsSummaryCard } from "@/components/tenant/clientes/clients-summary-card";
 import { ClientsHighlightsCard } from "@/components/tenant/clientes/clients-highlights-card";
 import { ClientsTableCard } from "@/components/tenant/clientes/clients-table-card";
 import { ClientsTrendCard } from "@/components/tenant/clientes/clients-trend-card";
+import { ClientDetailDrawer } from "@/components/tenant/clientes/client-detail-drawer";
+import { useTenant } from "@/components/tenant/tenant-context";
 
 export default function ClientesPage() {
   const router = useRouter();
@@ -30,6 +32,8 @@ export default function ClientesPage() {
   }, [error, router]);
 
   const clients = useMemo(() => (appts ? aggregateClients(appts) : []), [appts]);
+  const { me } = useTenant();
+  const [selected, setSelected] = useState<Client | null>(null);
 
   return (
     // min-h = viewport menos o header (h-16); o bento estica (flex-1) e, no desktop, a linha
@@ -44,10 +48,20 @@ export default function ClientesPage() {
 
         {/* Direita (4/6): Tabela (natural/compacta) + Novos por mês (estica p/ fechar a coluna). */}
         <div className="flex flex-col gap-4 lg:col-span-4">
-          <ClientsTableCard clients={clients} loading={!appts && !error} />
+          <ClientsTableCard clients={clients} loading={!appts && !error} onSelect={setSelected} />
           <ClientsTrendCard clients={clients} className="flex-1" />
         </div>
       </Bento>
+
+      <ClientDetailDrawer
+        open={selected !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null);
+        }}
+        client={selected}
+        appointments={appts ?? []}
+        me={me}
+      />
     </div>
   );
 }
