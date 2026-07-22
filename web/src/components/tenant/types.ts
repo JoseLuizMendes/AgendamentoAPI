@@ -6,7 +6,7 @@ export type MeResponse = {
   name?: string | null;
   role: string;
   tenantId: number;
-  tenant: { id: number; name: string; slug: string };
+  tenant: { id: number; name: string; slug: string; businessType: "GENERIC" | "DENTAL" };
 };
 
 export type Service = {
@@ -73,4 +73,56 @@ export type Appointment = {
   endTime: string;
   status: string;
   service?: Service;
+  // Charting odontológico (presente no GET /appointments/:id de tenant DENTAL).
+  teeth?: Tooth[];
 };
+
+// ── Odontológico (vertical DENTAL) — espelha as respostas da API ────────────────────────────
+export type DentalProcedure =
+  | "AVALIACAO"
+  | "PROFILAXIA"
+  | "RESTAURACAO"
+  | "ENDODONTIA"
+  | "EXTRACAO"
+  | "COROA"
+  | "PROTESE"
+  | "IMPLANTE"
+  | "CLAREAMENTO"
+  | "RASPAGEM"
+  | "SELANTE"
+  | "FLUOR"
+  | "RADIOGRAFIA"
+  | "OUTRO";
+
+/** Dente tratado numa consulta (GET /appointments/:id → teeth[]). */
+export type Tooth = {
+  id: number;
+  appointmentId: number;
+  toothFdi: number;
+  procedure: DentalProcedure;
+  note: string | null;
+  createdAt: string;
+};
+
+/** Entrada do odontograma consolidado (GET /patients/:id/odontogram). */
+export type OdontogramEntry = {
+  toothFdi: number;
+  procedure: DentalProcedure;
+  note: string | null;
+  lastTreatedAt: string;
+};
+
+/** Paciente (GET /patients, /patients/:id). */
+export type Patient = {
+  id: number;
+  tenantId: number;
+  name: string;
+  phone: string;
+  email: string | null;
+  birthDate: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PatientDetail = Patient & { appointments: Appointment[] };
