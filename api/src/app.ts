@@ -17,6 +17,7 @@ import { servicesRoutes } from "./routes/services.js";
 import { hoursRoutes } from "./routes/hours.js";
 import { overridesRoutes } from "./routes/overrides.js";
 import { appointmentsRoutes } from "./routes/appointments.js";
+import { patientsRoutes } from "./routes/patients.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { reportsRoutes } from "./routes/reports.js";
 import { uploadsRoutes } from "./routes/uploads.js";
@@ -229,6 +230,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(hoursRoutes);
   await app.register(overridesRoutes);
   await app.register(appointmentsRoutes);
+  await app.register(patientsRoutes);
   await app.register(settingsRoutes);
   await app.register(reportsRoutes);
   await app.register(uploadsRoutes);
