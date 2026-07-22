@@ -64,7 +64,7 @@ export async function getAppointment(
 ) {
   const appointment = await prisma.appointment.findUnique({
     where: { id },
-    include: { service: true },
+    include: { service: true, teeth: { orderBy: { toothFdi: "asc" } } },
   });
 
   if (!appointment || appointment.tenantId !== tenantId) {

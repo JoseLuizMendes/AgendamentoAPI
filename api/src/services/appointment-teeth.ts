@@ -1,4 +1,4 @@
-import type { DentalProcedure, PrismaClient } from "@prisma/client";
+import type { AppointmentTooth, DentalProcedure, PrismaClient } from "@prisma/client";
 import { assertDental, isValidFdiTooth } from "../utils/dental.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
 
@@ -24,7 +24,7 @@ export async function setAppointmentTeeth(
   tenantId: number,
   appointmentId: number,
   teeth: ToothInput[]
-): Promise<void> {
+): Promise<AppointmentTooth[]> {
   const appointment = await prisma.appointment.findFirst({
     where: { id: appointmentId, tenantId },
     select: { id: true, tenant: { select: { businessType: true } } },
@@ -53,5 +53,10 @@ export async function setAppointmentTeeth(
         })),
       });
     }
+  });
+
+  return prisma.appointmentTooth.findMany({
+    where: { appointmentId },
+    orderBy: { toothFdi: "asc" },
   });
 }

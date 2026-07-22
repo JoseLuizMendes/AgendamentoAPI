@@ -9,12 +9,15 @@ import {
   AppointmentResponseSchema,
   AppointmentListResponseSchema,
   SlotResponseSchema,
+  AppointmentTeethSetSchema,
+  ToothListResponseSchema,
   ErrorResponseSchema,
 } from "../schemas/index.js";
 import * as appointmentService from "../services/appointments.js";
+import { setAppointmentTeeth } from "../services/appointment-teeth.js";
 import { getAvailableSlots } from "../services/availability.js";
 import { createAppointmentIdempotent, readIdempotencyKey } from "../services/idempotency.js";
-import { requireAuth } from "../utils/guards.js";
+import { requireAuth, requireRole } from "../utils/guards.js";
 
 export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
   const zApp = app.withTypeProvider<ZodTypeProvider>();
@@ -167,6 +170,30 @@ export const appointmentsRoutes: FastifyPluginAsync = async (app) => {
         updateData
       );
       return reply.send(appointment);
+    }
+  );
+
+  // PUT /appointments/:id/teeth - Charting odontológico por consulta (DENTAL, OWNER/STAFF)
+  zApp.put(
+    "/appointments/:id/teeth",
+    {
+      preHandler: requireRole("OWNER", "STAFF"),
+      schema: {
+        tags: ["Appointments"],
+        params: AppointmentParamsSchema,
+        body: AppointmentTeethSetSchema,
+        response: { 200: ToothListResponseSchema, 400: ErrorResponseSchema, 404: ErrorResponseSchema },
+      },
+    },
+    async (req, reply) => {
+      const auth = requireAuth(req);
+      const teeth = await setAppointmentTeeth(
+        app.prisma,
+        auth.tenantId,
+        req.params.id,
+        req.body.teeth.map((t) => ({ toothFdi: t.toothFdi, procedure: t.procedure, note: t.note ?? null })),
+      );
+      return reply.send(teeth);
     }
   );
 
