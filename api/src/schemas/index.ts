@@ -114,6 +114,47 @@ export const AppointmentQuerySchema = z.object({
   to: z.string().datetime().optional(),
 });
 
+// Dental (odontológico) — a escrita só opera em tenant DENTAL (gating na camada de service).
+// Espelha o enum DentalProcedure do schema.prisma — manter em sincronia.
+export const DentalProcedureEnum = z.enum([
+  "AVALIACAO",
+  "PROFILAXIA",
+  "RESTAURACAO",
+  "ENDODONTIA",
+  "EXTRACAO",
+  "COROA",
+  "PROTESE",
+  "IMPLANTE",
+  "CLAREAMENTO",
+  "RASPAGEM",
+  "SELANTE",
+  "FLUOR",
+  "RADIOGRAFIA",
+  "OUTRO",
+]);
+
+export const ToothInputSchema = z.object({
+  toothFdi: z.number().int(),
+  procedure: DentalProcedureEnum,
+  note: z.string().max(500).nullish(),
+});
+
+// Conjunto de dentes de uma consulta (replace-on-edit). Máx 52 = dentição permanente + decídua.
+export const AppointmentTeethSetSchema = z.object({
+  teeth: z.array(ToothInputSchema).max(52),
+});
+
+export const ToothResponseSchema = z.object({
+  id: z.number(),
+  appointmentId: z.number(),
+  toothFdi: z.number(),
+  procedure: DentalProcedureEnum,
+  note: z.string().nullable(),
+  createdAt: z.date(),
+});
+
+export const ToothListResponseSchema = z.array(ToothResponseSchema);
+
 // Availability schema
 export const AvailabilityQuerySchema = z.object({
   serviceId: z.coerce.number().int().positive(),
@@ -248,9 +289,55 @@ export const AppointmentResponseSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   service: ServiceResponseSchema.optional(),
+  // Charting odontológico (presente no GET /appointments/:id de tenant DENTAL; ausente no resto).
+  teeth: ToothListResponseSchema.optional(),
 });
 
 export const AppointmentListResponseSchema = z.array(AppointmentResponseSchema);
+
+// Patient (paciente/cliente — entidade genérica, serve qualquer tenant)
+export const PatientParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
+export const PatientQuerySchema = z.object({
+  search: z.string().max(200).optional(),
+});
+
+export const PatientUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  email: z.string().email().nullish(),
+  birthDate: z.string().datetime().nullish(),
+  notes: z.string().max(2000).nullish(),
+});
+
+export const PatientResponseSchema = z.object({
+  id: z.number(),
+  tenantId: z.number(),
+  name: z.string(),
+  phone: z.string(),
+  email: z.string().nullable(),
+  birthDate: z.date().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const PatientListResponseSchema = z.array(PatientResponseSchema);
+
+export const PatientDetailResponseSchema = PatientResponseSchema.extend({
+  appointments: z.array(AppointmentResponseSchema),
+});
+
+// Odontograma consolidado: último procedimento por dente (agregado do histórico do paciente).
+export const OdontogramEntrySchema = z.object({
+  toothFdi: z.number(),
+  procedure: DentalProcedureEnum,
+  note: z.string().nullable(),
+  lastTreatedAt: z.date(),
+});
+
+export const OdontogramResponseSchema = z.array(OdontogramEntrySchema);
 
 export const SlotResponseSchema = z.array(
   z.object({
@@ -328,3 +415,5 @@ export type BusinessHoursCreate = z.infer<typeof BusinessHoursCreateSchema>;
 export type BusinessHoursUpdate = z.infer<typeof BusinessHoursUpdateSchema>;
 export type OverrideCreate = z.infer<typeof OverrideCreateSchema>;
 export type OverrideUpdate = z.infer<typeof OverrideUpdateSchema>;
+export type PatientUpdate = z.infer<typeof PatientUpdateSchema>;
+export type AppointmentTeethSet = z.infer<typeof AppointmentTeethSetSchema>;
